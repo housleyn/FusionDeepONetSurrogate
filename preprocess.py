@@ -1,0 +1,48 @@
+import pandas as pd
+import numpy as np
+
+
+class Preprocess:
+    def __init__(self, radius_files, output_path="processed_data.npz"):
+        self.radius_files = radius_files
+        self.output_path = output_path
+        self.coords = []
+        self.radii = []
+        self.outputs = []
+        self.coords = []
+        self.npts_max = 0 #max elements determined based on data
+
+
+        
+    def load_and_pad(self):
+        for radius, path in self.radius_files.items():
+            df = pd.read_csv(path)
+            coords = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
+            outputs = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
+            radius_vec = np.full((coords.shape[0],1),radius)
+
+            self.coords.append(coords)
+            self.radii.append(radius_vec)
+            self.outputs.append(outputs)
+
+        self.npts_max = max(c.shape[0] for c in self.coords)
+        self.coords = [self._pad(c) for c in self.coords]
+        self.radii = [self._pad(r) for r in self.radii]
+        self.outputs = [self._pad(o) for o in self.outputs]
+
+    def _pad(self, arr):
+        return np.pad(arr, ((0, self.npts_max - arr.shape[0]), (0, 0)), mode="edge")
+   
+    def to_numpy(self):
+        X_coords = np.stack(self.coords)
+        Y_outputs = np.stack(self.outputs)
+        G_params = np.stack(self.radii)[:,0,:]
+        return X_coords, Y_outputs, G_params
+    
+    def save(self):
+        X_coords, Y_outputs, G_params = self.to_numpy()
+        np.savez(self.output_path, coords=X_coords, outputs=Y_outputs, params=G_params)
+
+    def run_all(self):
+        self.load_and_pad()
+        self.save()
