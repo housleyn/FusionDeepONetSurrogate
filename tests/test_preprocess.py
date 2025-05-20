@@ -95,3 +95,18 @@ def test_run_all_creates_file(preprocess):
     assert data["coords"].shape == (3, preprocess.npts_max, 3)
     assert data["outputs"].shape == (3, preprocess.npts_max, 5)
     assert data["params"].shape == (3, 1)
+
+def test_saved_arrays_are_normalized(preprocess):
+    preprocess.run_all()
+    data = np.load(preprocess.output_path)
+
+    def assert_normalized(arr, tol=1e-6):
+        flat = arr.reshape(-1, arr.shape[-1])
+        mean = flat.mean(axis=0)
+        std = flat.std(axis=0)
+        assert np.all(np.abs(mean) < tol), f"Mean not ~0: {mean}"
+        assert np.all(np.abs(std - 1) < tol), f"Std not ~1: {std}"
+
+    assert_normalized(data["coords"])
+    assert_normalized(data["outputs"])
+    assert_normalized(data["params"])
