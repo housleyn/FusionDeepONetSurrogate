@@ -2,12 +2,13 @@ import torch
 from model import FusionDeepONet
 from dataloader import get_dataloader
 from trainer import Trainer
+import matplotlib.pyplot as plt
 
 def main():
     # === Configuration ===
     npz_path = "test_processed_data.npz"
     batch_size = 3
-    num_epochs = 5
+    num_epochs = 50
     output_dim = 5  # or 5 if including pressure
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -24,13 +25,20 @@ def main():
     )
 
     # === Train Model ===
-    trainer = Trainer(model, dataloader, device=device, lr=1e-3)
-    loss_history = trainer.train(num_epochs=num_epochs, print_every=100)
+    trainer = Trainer(model, dataloader, device=device, lr=1)
+    loss_history = trainer.train(num_epochs=num_epochs, print_every=1)
 
     # === Save Model ===
     trainer.save_model("fusion_deeponet.pt")
 
     print("✅ Training complete.")
+    return loss_history
 
 if __name__ == "__main__":
-    main()
+    loss_history = main()
+
+    plt.plot(loss_history)
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training Loss History")
+    plt.show()
