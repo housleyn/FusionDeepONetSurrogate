@@ -11,20 +11,20 @@ class Trainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.95)
 
-    def train(self, num_epochs=1000, print_every=100):
+    def train(self, train_loader, test_loader, num_epochs=1000, print_every=100):
         self.model.train()
-        loss_history = []
+        loss_history, test_loss_history = [], []
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
 
-            for coords, params, targets in self.dataloader:
-                coords = coords.to(self.device)       # shape: (B, N, 3)
-                params = params.to(self.device)       # shape: (B, 1)
-                targets = targets.to(self.device)     # shape: (B, N, 5)
+            for coords, params, targets in train_loader:
+                coords = coords.to(self.device)
+                params = params.to(self.device)
+                targets = targets.to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(coords, params)  # shape: (B, N, output_dim)
+                outputs = self.model(coords, params)
                 loss = self.criterion(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
@@ -32,13 +32,35 @@ class Trainer:
                 epoch_loss += loss.item()
 
             self.lr_scheduler.step()
-            avg_loss = epoch_loss / len(self.dataloader)
+            avg_loss = epoch_loss / len(train_loader)
             loss_history.append(avg_loss)
 
-            if epoch % print_every == 0 or epoch == num_epochs - 1:
-                print(f"Epoch {epoch:4d} | Loss: {avg_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e}")
+            # Evaluate on the test set
+            test_loss = self.evaluate(test_loader)
+            test_loss_history.append(test_loss)
 
-        return loss_history
+            if epoch % print_every == 0 or epoch == num_epochs - 1:
+                print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e}")
+
+        return loss_history, test_loss_history
+
+    
+    def evaluate(self, dataloader):
+        self.model.eval()
+        total_loss = 0.0
+        with torch.no_grad():
+            for coords, params, targets in dataloader:
+                coords = coords.to(self.device)
+                params = params.to(self.device)
+                targets = targets.to(self.device)
+
+                outputs = self.model(coords, params)
+                loss = self.criterion(outputs, targets)
+                total_loss += loss.item()
+
+        avg_loss = total_loss / len(dataloader)
+        return avg_loss
+
 
     def save_model(self, path="fusion_deeponet.pt"):
         torch.save(self.model.state_dict(), path)

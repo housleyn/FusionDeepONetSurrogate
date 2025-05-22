@@ -5,36 +5,38 @@ from trainer import Trainer
 import matplotlib.pyplot as plt
 from preprocess import Preprocess
 import os
+from inference import load_model, load_stats, predict, load_csv_input, save_to_csv
 
 def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
-    batch_size = 3
-    num_epochs = 10
+    batch_size = 1
+    num_epochs = 50
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # === Load Data ===
-    dataloader = get_dataloader(npz_path, batch_size=batch_size, shuffle=True)
+    train_loader, test_loader = get_dataloader(npz_path, batch_size=1, test_size=0.25)
 
     # === Create Model ===
     model = FusionDeepONet(
         coord_dim=3,
         param_dim=1,
-        hidden_size=64,
+        hidden_size=32,
         num_hidden_layers=3,
         out_dim=output_dim
     )
 
     # === Train Model ===
-    trainer = Trainer(model, dataloader, device=device, lr=1e-3)
-    loss_history = trainer.train(num_epochs=num_epochs, print_every=1)
+ 
+    trainer = Trainer(model, train_loader, device=device)
+    loss_history, test_loss_history = trainer.train(train_loader, test_loader, num_epochs, print_every=1)
 
     # === Save Model ===
     trainer.save_model("fusion_deeponet.pt")
 
     print("✅ Training complete.")
-    return loss_history
+    return loss_history, test_loss_history
 
 def radius_file_dict():
         base_dir = os.path.dirname(__file__)
@@ -48,10 +50,31 @@ def radius_file_dict():
 if __name__ == "__main__":
     preprocess = Preprocess(radius_files=radius_file_dict(), output_path="processed_data.npz")
     preprocess.run_all()
-    loss_history = main()
+    # loss_history, test_loss_history = main()
 
-    plt.plot(loss_history)
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training Loss History")
-    plt.show()
+    # plt.plot(loss_history, label='Training Loss')
+    # plt.plot(test_loss_history, label='Testing Loss')
+    # plt.xlabel("Epoch")
+    # plt.ylabel("Loss")
+    # plt.title("Training and Testing Loss History")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.savefig("loss_history.png")
+    # plt.show()
+
+
+    # Load model and stats
+    device = "cpu"
+    model = load_model("fusion_deeponet.pt", device)
+    stats = load_stats("processed_data.npz")
+
+    # Prepare input
+    coords_np, radius_val = load_csv_input("sphere_data_075.csv")
+
+    # Predict
+    output = predict(coords_np, radius_val, model, stats, device)
+
+    # output shape = (n_pts, 5)
+
+    # Save to CSV
+    save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")

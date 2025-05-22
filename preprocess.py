@@ -57,7 +57,13 @@ class Preprocess:
 
     def save(self):
         X_coords, Y_outputs, G_params = self.to_numpy()
-        np.savez(self.output_path, coords=X_coords, outputs=Y_outputs, params=G_params)
+        np.savez(self.output_path, coords=X_coords, outputs=Y_outputs, params=G_params,
+                coords_mean=self.coords_mean,
+                coords_std=self.coords_std,
+                outputs_mean=self.outputs_mean,
+                outputs_std=self.outputs_std,
+                radii_mean=self.radii_mean,
+                radii_std=self.radii_std)
 
     def run_all(self):
         self.load_and_pad()
