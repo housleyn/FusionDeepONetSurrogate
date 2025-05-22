@@ -10,7 +10,7 @@ def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
     batch_size = 3
-    num_epochs = 5
+    num_epochs = 10
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -41,7 +41,8 @@ def radius_file_dict():
         return {
             0.2: os.path.join(base_dir, "sphere_data_02.csv"),
             0.6: os.path.join(base_dir, "sphere_data_06.csv"),
-            1.0: os.path.join(base_dir, "sphere_data_1.csv")
+            1.0: os.path.join(base_dir, "sphere_data_1.csv"),
+            0.75: os.path.join(base_dir, "sphere_data_075.csv"),
         }
 
 if __name__ == "__main__":
