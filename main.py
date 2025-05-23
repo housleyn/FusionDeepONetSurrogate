@@ -3,6 +3,7 @@ from model import FusionDeepONet
 from dataloader import get_dataloader
 from trainer import Trainer
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from preprocess import Preprocess
 import os
 from inference import load_model, load_stats, predict, load_csv_input, save_to_csv, save_to_vtk
@@ -12,7 +13,7 @@ def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
     batch_size = 1
-    num_epochs = 500
+    num_epochs = 5000
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -49,19 +50,19 @@ def radius_file_dict():
         }
 
 if __name__ == "__main__":
-    preprocess = Preprocess(radius_files=radius_file_dict(), output_path="processed_data.npz")
-    preprocess.run_all()
-    loss_history, test_loss_history = main()
+    # preprocess = Preprocess(radius_files=radius_file_dict(), output_path="processed_data.npz")
+    # preprocess.run_all()
+    # loss_history, test_loss_history = main()
 
-    plt.plot(loss_history, label='Training Loss')
-    plt.plot(test_loss_history, label='Testing Loss')
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training and Testing Loss History")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig("loss_history.png")
-    plt.show()
+    # plt.plot(loss_history, label='Training Loss')
+    # plt.plot(test_loss_history, label='Testing Loss')
+    # plt.xlabel("Epoch")
+    # plt.ylabel("Loss")
+    # plt.title("Training and Testing Loss History")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.savefig("loss_history.png")
+    # plt.show()
 
 
     # Load model and stats
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     stats = load_stats("processed_data.npz")
 
     # Prepare input
-    coords_np, radius_val = load_csv_input("sphere_data_075.csv")
+    coords_np, radius_val = load_csv_input("sphere_data_04.csv")
 
     # Predict
     output = predict(coords_np, radius_val, model, stats, device)
@@ -84,5 +85,5 @@ if __name__ == "__main__":
     save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
 
     plotter = pv.Plotter()
-    plotter.add_mesh(pv.read("predicted_output.vtk"), scalars="velocity", point_size=5, render_points_as_spheres=True)
+    plotter.add_mesh(pv.read("predicted_output.vtk"), scalars="velocity",cmap=cm.get_cmap("jet"), point_size=5, render_points_as_spheres=True)
     plotter.show()

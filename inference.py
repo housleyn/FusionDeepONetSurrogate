@@ -83,9 +83,9 @@ def save_to_vtk(coords_np, output_np, out_path="predicted_output.vtk"):
     cloud = pv.PolyData(coords_np)
 
     # Add vector and scalar fields
-    cloud["velocity"] = output_np[:, :3]                   # u, v, w
-    cloud["pressure"] = output_np[:, 3]                    # pressure
-    cloud["density"] = output_np[:, 4]                     # density
+    cloud["velocity"] = output_np[:, 1:4]                   # u, v, w
+    cloud["pressure"] = output_np[:, 4]                    # pressure
+    cloud["density"] = output_np[:, 0]                     # density
 
     # Save to VTK
     cloud.save(out_path)
