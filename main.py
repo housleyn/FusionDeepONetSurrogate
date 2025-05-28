@@ -13,7 +13,7 @@ def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
     batch_size = 1
-    num_epochs = 5000
+    num_epochs = 2
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -50,40 +50,40 @@ def radius_file_dict():
         }
 
 if __name__ == "__main__":
-    # preprocess = Preprocess(radius_files=radius_file_dict(), output_path="processed_data.npz")
-    # preprocess.run_all()
-    # loss_history, test_loss_history = main()
+    preprocess = Preprocess(radius_files=radius_file_dict(), output_path="processed_data.npz")
+    preprocess.run_all()
+    loss_history, test_loss_history = main()
 
-    # plt.plot(loss_history, label='Training Loss')
-    # plt.plot(test_loss_history, label='Testing Loss')
-    # plt.xlabel("Epoch")
-    # plt.ylabel("Loss")
-    # plt.title("Training and Testing Loss History")
-    # plt.legend()
-    # plt.grid(True)
-    # plt.savefig("loss_history.png")
-    # plt.show()
+    plt.plot(loss_history, label='Training Loss')
+    plt.plot(test_loss_history, label='Testing Loss')
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training and Testing Loss History")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("loss_history.png")
+    plt.show()
 
 
-    # Load model and stats
-    device = "cpu"
-    model = load_model("fusion_deeponet.pt", device)
-    stats = load_stats("processed_data.npz")
+    # # Load model and stats
+    # device = "cpu"
+    # model = load_model("fusion_deeponet.pt", device)
+    # stats = load_stats("processed_data.npz")
 
-    # Prepare input
-    coords_np, radius_val = load_csv_input("sphere_data_04.csv")
+    # # Prepare input
+    # coords_np, radius_val = load_csv_input("sphere_data_1.csv")
 
-    # Predict
-    output = predict(coords_np, radius_val, model, stats, device)
+    # # Predict
+    # output = predict(coords_np, radius_val, model, stats, device)
 
-    # output shape = (n_pts, 5)
+    # # output shape = (n_pts, 5)
 
-    # Save to CSV
-    save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")
+    # # Save to CSV
+    # save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")
 
-    # Save to VTK for visualization
-    save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
+    # # Save to VTK for visualization
+    # save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
 
-    plotter = pv.Plotter()
-    plotter.add_mesh(pv.read("predicted_output.vtk"), scalars="velocity",cmap=cm.get_cmap("jet"), point_size=5, render_points_as_spheres=True)
-    plotter.show()
+    # plotter = pv.Plotter()
+    # plotter.add_mesh(pv.read("predicted_output.vtk"), scalars="density",cmap=cm.get_cmap("jet"), point_size=5, render_points_as_spheres=True)
+    # plotter.show()
