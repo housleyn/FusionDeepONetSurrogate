@@ -27,7 +27,7 @@ class MLP(nn.Module):            #                                              
         self.final = nn.Linear(hidden_features, out_features)
 
 
-    def forward_with_activations(self,x):
+    def forward_with_outputs(self,x):
         hidden_outputs = []
         for layer, act in zip(self.layers, self.activations):
             x = act(layer(x))
@@ -64,11 +64,11 @@ class FusionDeepONet(nn.Module):
         # coords: (batch, n_pts, coord_dim)
         # params: (batch, param_dim)
 
-        B, n_pts, _ = coords.shape
-        H = self.hidden_size
-        O = self.out_dim
+        B, n_pts, _ = coords.shape #batch
+        H = self.hidden_size #hidden
+        O = self.out_dim #output
 
-        branch_out, branch_hiddens = self.branch.forward_with_activations(params)
+        branch_out, branch_hiddens = self.branch.forward_with_outputs(params)
         
         S = [branch_hiddens[0]]                                                      #eq. 4.3
         for i in range(1, self.num_hidden_layers): #trunk fusion forloop
