@@ -76,13 +76,13 @@ class FusionDeepONet(nn.Module):
 
         x = coords 
         for i, (layer,act) in enumerate(zip(self.trunk_layers,self.trunk_activations)):
-            x = layer(x)
+            x = act(layer(x))
 
             if i < len(S):
                 S_i = S[i].unsqueeze(1) #change dimension of branch to be multiplied by trunk (B, 1, H)
                 x = x* S_i #element wise multiplication                                                        eq. 4.4
             
-            x = act(x)
+            
         
 
         YL = self.trunk_final(x) #(B, N_pts, H)                                                        eq 4.5

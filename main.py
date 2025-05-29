@@ -12,13 +12,13 @@ import pyvista as pv
 def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
-    batch_size = 1
-    num_epochs = 2
+    batch_size = 1024
+    num_epochs = 10000
     output_dim = 5  # u,v,w,rho, and p (not in that order)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu" 
 
     # === Load Data ===
-    train_loader, test_loader = get_dataloader(npz_path, batch_size=1, test_size=0.25)
+    train_loader, test_loader = get_dataloader(npz_path, batch_size, test_size=0.25)
 
     # === Create Model ===
     model = FusionDeepONet(
@@ -44,9 +44,14 @@ def radius_file_dict():
         base_dir = os.path.dirname(__file__)
         return {
             0.2: os.path.join(base_dir, "sphere_data_02.csv"),
+            0.3: os.path.join(base_dir, "sphere_data_03.csv"),
+            0.4: os.path.join(base_dir, "sphere_data_04.csv"),
+            0.5: os.path.join(base_dir, "sphere_data_05.csv"),
             0.6: os.path.join(base_dir, "sphere_data_06.csv"),
+            0.7: os.path.join(base_dir, "sphere_data_07.csv"),
+            0.8: os.path.join(base_dir, "sphere_data_08.csv"),
+            0.9: os.path.join(base_dir, "sphere_data_09.csv"),
             1.0: os.path.join(base_dir, "sphere_data_1.csv"),
-            0.75: os.path.join(base_dir, "sphere_data_075.csv"),
         }
 
 if __name__ == "__main__":
@@ -54,10 +59,10 @@ if __name__ == "__main__":
     preprocess.run_all()
     loss_history, test_loss_history = main()
 
-    plt.plot(loss_history, label='Training Loss')
-    plt.plot(test_loss_history, label='Testing Loss')
+    plt.semilogy(loss_history, label='Training Loss')
+    plt.semilogy(test_loss_history, label='Testing Loss')
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel("Loss (log scale)")
     plt.title("Training and Testing Loss History")
     plt.legend()
     plt.grid(True)

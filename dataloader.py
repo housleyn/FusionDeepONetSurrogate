@@ -18,7 +18,7 @@ class FusionCFDDataset(Dataset):
 
 
 
-def get_dataloader(npz_path, batch_size=1, shuffle=True, test_size=0.25):
+def get_dataloader(npz_path, batch_size=1, shuffle=True, test_size=2/9):
     data = np.load(npz_path)
     coords = torch.tensor(data["coords"], dtype=torch.float32)
     outputs = torch.tensor(data["outputs"], dtype=torch.float32)
