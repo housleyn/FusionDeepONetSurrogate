@@ -12,13 +12,13 @@ import pyvista as pv
 def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
-    batch_size = 1024
-    num_epochs = 10000
+    batch_size = 1
+    num_epochs = 50000
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
     # === Load Data ===
-    train_loader, test_loader = get_dataloader(npz_path, batch_size, test_size=0.25)
+    train_loader, test_loader = get_dataloader(npz_path, batch_size=batch_size, test_size=0.25)
 
     # === Create Model ===
     model = FusionDeepONet(
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid(True)
     plt.savefig("loss_history.png")
-    plt.show()
+    # plt.show()
 
 
     # # Load model and stats
