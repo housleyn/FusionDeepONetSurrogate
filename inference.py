@@ -57,15 +57,15 @@ import csv
 
 def save_to_csv(coords_np, output_np, radius_val, out_path="predicted_output.csv"):
     headers = [
-        '"Velocity[i] (m/s)"', '"Velocity[j] (m/s)"', '"Velocity[k] (m/s)"',
-        '"Absolute Pressure (Pa)"', '"Density (kg/m^3)"',
-        '"Sphere Radius"', '"X (m)"', '"Y (m)"', '"Z (m)"'
+        'Density (kg/m^3)', 'Velocity[i] (m/s)', 'Velocity[j] (m/s)', 'Velocity[k] (m/s)',
+        'Absolute Pressure (Pa)', 
+        "Sphere Radius", "X (m)", "Y (m)", "Z (m)"
     ]
-    
+
     with open(out_path, mode='w', newline='') as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(headers)
-        
+
         for i in range(coords_np.shape[0]):
             vel = output_np[i, :3]
             pressure = output_np[i, 3]
