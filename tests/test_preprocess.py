@@ -17,6 +17,13 @@ def radius_file_dict():
 def preprocess(radius_file_dict):
     return Preprocess(radius_files=radius_file_dict, output_path="test_processed_data.npz")
 
+@pytest.fixture
+def small_radius_file_dict():
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    return {
+        0.2: os.path.join(base_dir, "sphere_data_02.csv")
+    }
+
 def test_radius_files_initialized_correctly(preprocess):
     assert len(preprocess.radius_files) == 3
     assert all(isinstance(radius, float) for radius in preprocess.radius_files.keys())
@@ -110,3 +117,27 @@ def test_saved_arrays_are_normalized(preprocess):
     assert_normalized(data["coords"])
     assert_normalized(data["outputs"])
     assert_normalized(data["params"])
+def test_lhs_sample_point_count_and_spread():
+    import os
+    from preprocess import Preprocess
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    radius_files = {
+        0.2: os.path.join(base_dir, "sphere_data_02.csv")
+    }
+    preprocess = Preprocess(radius_files=radius_files, output_path="test_processed_data.npz")
+    preprocess.load_and_pad()
+
+    coords = preprocess.coords[0]
+    unpadded = coords[~np.all(coords == coords[0], axis=1)]  # filter padding
+
+    n_expected = 50000
+    n_actual = unpadded.shape[0]
+
+    # Assert reasonable number of unique sampled points
+    assert n_actual >= 0.8 * n_expected, f"Expected ~{n_expected} points, got {n_actual}"
+
+    # Check bounding box coverage (should span >10% of domain in each axis)
+    min_vals, max_vals = unpadded.min(axis=0), unpadded.max(axis=0)
+    bbox_range = max_vals - min_vals
+    assert np.all(bbox_range > 0.1), "Sampled points are not well-distributed in space"
+

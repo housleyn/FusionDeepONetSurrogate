@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from scipy.stats import qmc 
+from sklearn.neighbors import NearestNeighbors
+
 
 
 class Preprocess:
@@ -14,8 +17,28 @@ class Preprocess:
     def load_and_pad(self):
         for radius, path in self.radius_files.items():
             df = pd.read_csv(path)
-            coords = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
-            outputs = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
+            coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
+            outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
+
+            N_sample = 50000
+            coords_min = coords_full.min(axis=0)
+            coords_max = coords_full.max(axis=0)
+            coords_norm = (coords_full - coords_min) / (coords_max - coords_min)
+
+            # LHS points in [0, 1]^3
+            sampler = qmc.LatinHypercube(d=3)
+            lhs = sampler.random(n=N_sample)
+
+            # Nearest neighbor mapping
+            nn = NearestNeighbors(n_neighbors=1, algorithm="auto").fit(coords_norm)
+            _, indices = nn.kneighbors(lhs)
+            indices = indices[:, 0]
+
+            # Select matched points
+            coords = coords_full[indices]
+            outputs = outputs_full[indices]
+
+
             radius_vec = np.full((coords.shape[0], 1), radius)
 
             self.coords.append(coords)
