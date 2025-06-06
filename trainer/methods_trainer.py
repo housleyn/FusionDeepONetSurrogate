@@ -1,18 +1,5 @@
-import torch
-import torch.nn as nn
-from tqdm import tqdm
-
-
-
-class Trainer:
-    def __init__(self, model, dataloader, device="cpu", lr=1e-3):
-        self.model = model.to(device)
-        self.dataloader = dataloader
-        self.device = device
-        self.criterion = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.95)
-
+import torch 
+class MethodsTrainer:
     def train(self, train_loader, test_loader, num_epochs=1000, print_every=100):
         self.model.train()
         loss_history, test_loss_history = [], []

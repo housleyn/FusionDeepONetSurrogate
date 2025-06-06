@@ -1,13 +1,12 @@
 import pytest
 import os 
 import sys 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from preprocess import Preprocess
 import numpy as np
 
 @pytest.fixture
 def radius_file_dict():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '3D_data'))
     return {
         0.2: os.path.join(base_dir, "sphere_data_02.csv"),
         0.6: os.path.join(base_dir, "sphere_data_06.csv"),
@@ -61,7 +60,7 @@ def test_in_load_and_pad_for_loop_appends_correctly(preprocess):
 
 def test_npts_max_updated_correctly(preprocess):
     preprocess.load_and_pad()
-    assert preprocess.npts_max == 3022569
+    assert preprocess.npts_max == 500000
 
 def test_pad_set_all_sizes_to_max_points(preprocess):
     preprocess.load_and_pad()
@@ -120,7 +119,7 @@ def test_saved_arrays_are_normalized(preprocess):
 def test_lhs_sample_point_count_and_spread():
     import os
     from preprocess import Preprocess
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '3D_data'))
     radius_files = {
         0.2: os.path.join(base_dir, "sphere_data_02.csv")
     }

@@ -1,26 +1,27 @@
 import torch
 from model import FusionDeepONet
-from dataloader import get_dataloader
+from dataloader import Data
 from trainer import Trainer
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import colormaps
 from preprocess import Preprocess
 import os
-from inference import load_model, load_stats, predict, load_csv_input, save_to_csv, save_to_vtk
+from inference import Inference
 import pyvista as pv
 import pandas as pd
 
 def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
-    batch_size = 3
-    num_epochs = 50000
+    batch_size = 1
+    num_epochs = 1
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
     # === Load Data ===
-    train_loader, test_loader = get_dataloader(npz_path, batch_size=batch_size, test_size=0.25)
+    data = Data(npz_path)
+    train_loader, test_loader = data.get_dataloader(batch_size, shuffle=True, test_size=0.25)
 
     # === Create Model ===
     model = FusionDeepONet(
@@ -44,6 +45,7 @@ def main():
 
 def radius_file_dict():
         base_dir = os.path.dirname(__file__)
+        data_dir = os.path.join(base_dir, "3D_data")
         return {
             0.2: os.path.join(base_dir, "sphere_data_02.csv"),
             0.3: os.path.join(base_dir, "sphere_data_03.csv"),
@@ -92,31 +94,32 @@ if __name__ == "__main__":
     plt.title("Training and Testing Loss History")
     plt.legend()
     plt.grid(True)
-    plt.savefig("loss_history.png")
-    plt.show()
+    os.makedirs("figures", exist_ok=True)
+    plt.savefig("figures/loss_history.png")
+    # plt.show()
 
 
-    # # Load model and stats
-    # file_to_load = "sphere_data_075.csv"
-    # file_to_make = "sphere_data_075.vtk"
-    # device = "cpu"
-    # model = load_model("fusion_deeponet.pt", device)
-    # stats = load_stats("processed_data.npz")
+    # Load model and stats
+    file_to_load = "sphere_data_075.csv"
+    file_to_make = "sphere_data_075.vtk"
+    device = "cpu"
+    from inference import Inference
+    inference = Inference(model_path="fusion_deeponet.pt", stats_path="processed_data.npz", device=device)
 
-    # # Prepare input
-    # coords_np, radius_val = load_csv_input(file_to_load)
+    # Prepare input
+    coords_np, radius_val = inference.load_csv_input(file_to_load)
 
-    # # Predict
-    # output = predict(coords_np, radius_val, model, stats, device)
+    # Predict
+    output = inference.predict(coords_np, radius_val)
 
-    # # output shape = (n_pts, 5)
+    # output shape = (n_pts, 5)
 
-    # # Save to CSV
-    # save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")
+    # Save to CSV
+    inference.save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")
 
-    # # Save to VTK for visualization
-    # save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
-    # csv_to_vtk(file_to_load, file_to_make)
+    # Save to VTK for visualization
+    inference.save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
+    csv_to_vtk(file_to_load, file_to_make)
 
     
     # mesh = pv.read("predicted_output.vtk")
@@ -140,3 +143,6 @@ if __name__ == "__main__":
     # plotter = pv.Plotter()
     # plotter.add_mesh(mesh, cmap=cm.get_cmap("jet"),clim=[0, 16.5])
     # plotter.show()
+
+
+    #ADD CODE FOR ERROR CALCULATIONS IN INFERENCE CLASS

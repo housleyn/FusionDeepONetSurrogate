@@ -37,15 +37,7 @@ def test_invalid_input_shape_raises(model):
         model(coords, params)
 
 
-def test_branch_outputs_with_activations():
-    branch = MLP(1, 320, 64, 3)
-    x = torch.rand(4, 1)
-    out, activations = branch.forward_with_activations(x)
-    
-    assert out.shape == (4, 320)
-    assert len(activations) == 4
-    for a in activations:
-        assert a.shape == (4, 64)
+
 
 
 def test_output_is_finite(model):

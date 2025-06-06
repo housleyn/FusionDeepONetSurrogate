@@ -3,24 +3,14 @@ import numpy as np
 from scipy.stats import qmc 
 from sklearn.neighbors import NearestNeighbors
 
-
-
-class Preprocess:
-    def __init__(self, radius_files, output_path="processed_data.npz"):
-        self.radius_files = radius_files
-        self.output_path = output_path
-        self.coords = []
-        self.radii = []
-        self.outputs = []
-        self.npts_max = 0  # max elements determined based on data
-
+class MethodsPreprocess:
     def load_and_pad(self):
         for radius, path in self.radius_files.items():
             df = pd.read_csv(path)
             coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
             outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
 
-            N_sample = 50000
+            N_sample = 500000
             coords_min = coords_full.min(axis=0)
             coords_max = coords_full.max(axis=0)
             coords_norm = (coords_full - coords_min) / (coords_max - coords_min)
