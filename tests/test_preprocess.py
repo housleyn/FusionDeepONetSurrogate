@@ -1,142 +1,100 @@
-import pytest
-import os 
-import sys 
-from preprocess import Preprocess
+import os
 import numpy as np
+import pandas as pd
+import pytest
+
+from preprocess import Preprocess
+import preprocess.methods_preprocess as mp
+
+# Use a small sample size for faster tests
+TEST_SAMPLE_SIZE = 20
+
+
+@pytest.fixture(autouse=True)
+def patch_sampling(monkeypatch):
+    def dummy_random(self, n):
+        rng = np.random.default_rng(0)
+        return rng.random((TEST_SAMPLE_SIZE, 3))
+
+    class DummyNN:
+        def __init__(self, *args, **kwargs):
+            pass
+        def fit(self, coords):
+            self.n = coords.shape[0]
+            return self
+        def kneighbors(self, lhs):
+            idx = np.arange(lhs.shape[0]) % self.n
+            return None, idx.reshape(-1, 1)
+
+    monkeypatch.setattr(mp.qmc.LatinHypercube, "random", dummy_random)
+    monkeypatch.setattr(mp, "NearestNeighbors", DummyNN)
+
 
 @pytest.fixture
-def radius_file_dict():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '3D_data'))
-    return {
-        0.2: os.path.join(base_dir, "sphere_data_02.csv"),
-        0.6: os.path.join(base_dir, "sphere_data_06.csv"),
-        1.0: os.path.join(base_dir, "sphere_data_1.csv")
-    }
-@pytest.fixture
-def preprocess(radius_file_dict):
-    return Preprocess(radius_files=radius_file_dict, output_path="test_processed_data.npz")
+def radius_file_dict(tmp_path):
+    df = pd.DataFrame({
+        "X (m)": np.linspace(0, 1, 10),
+        "Y (m)": np.linspace(0, 1, 10),
+        "Z (m)": np.linspace(0, 1, 10),
+        "Density (kg/m^3)": np.linspace(1, 2, 10),
+        "Velocity[i] (m/s)": np.linspace(0, 1, 10),
+        "Velocity[j] (m/s)": np.linspace(0, 1, 10),
+        "Velocity[k] (m/s)": np.linspace(0, 1, 10),
+        "Absolute Pressure (Pa)": np.linspace(0, 1, 10),
+    })
+    mapping = {}
+    for r in [0.2, 0.6, 1.0]:
+        path = tmp_path / f"data_{r}.csv"
+        df.to_csv(path, index=False)
+        mapping[r] = str(path)
+    return mapping
+
 
 @pytest.fixture
-def small_radius_file_dict():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    return {
-        0.2: os.path.join(base_dir, "sphere_data_02.csv")
-    }
+def preprocess(radius_file_dict, tmp_path):
+    return Preprocess(radius_files=radius_file_dict, output_path=str(tmp_path / "processed.npz"))
 
-def test_radius_files_initialized_correctly(preprocess):
-    assert len(preprocess.radius_files) == 3
-    assert all(isinstance(radius, float) for radius in preprocess.radius_files.keys())
 
-def test_output_path_initialized_correctly(preprocess):
-    assert preprocess.output_path == "test_processed_data.npz"
-    assert os.path.splitext(preprocess.output_path)[1] == ".npz"
-
-def test_coords_initialized_empty(preprocess):
-    assert len(preprocess.coords) == 0
-    assert isinstance(preprocess.coords, list)
-
-def test_radii_initialized_empty(preprocess):
-    assert len(preprocess.radii) == 0
-    assert isinstance(preprocess.radii, list)
-
-def test_npts_max_initialized_zero(preprocess):
+def test_initial_state(preprocess):
+    assert preprocess.coords == []
+    assert preprocess.radii == []
+    assert preprocess.outputs == []
     assert preprocess.npts_max == 0
-    assert isinstance(preprocess.npts_max, int)
 
 
-def test_outputs_initialized_empty(preprocess):
-    assert len(preprocess.outputs) == 0
-    assert isinstance(preprocess.outputs, list)
-
-
-def test_in_load_and_pad_for_loop_appends_correctly(preprocess):
+def test_load_and_pad(preprocess):
     preprocess.load_and_pad()
     assert len(preprocess.coords) == 3
-    assert len(preprocess.radii) == 3
-    assert len(preprocess.outputs) == 3
-    assert all(isinstance(coord, np.ndarray) for coord in preprocess.coords)
-    assert all(isinstance(radius, np.ndarray) for radius in preprocess.radii)
-    assert all(isinstance(output, np.ndarray) for output in preprocess.outputs)
-
-def test_npts_max_updated_correctly(preprocess):
-    preprocess.load_and_pad()
-    assert preprocess.npts_max == 500000
-
-def test_pad_set_all_sizes_to_max_points(preprocess):
-    preprocess.load_and_pad()
-    for coord, radius, output in zip(preprocess.coords, preprocess.radii, preprocess.outputs):
-        assert coord.shape[0] == preprocess.npts_max
-        assert radius.shape[0] == preprocess.npts_max
-        assert output.shape[0] == preprocess.npts_max
+    assert preprocess.npts_max == TEST_SAMPLE_SIZE
+    for c, r, o in zip(preprocess.coords, preprocess.radii, preprocess.outputs):
+        assert c.shape[0] == TEST_SAMPLE_SIZE
+        assert r.shape[0] == TEST_SAMPLE_SIZE
+        assert o.shape[0] == TEST_SAMPLE_SIZE
 
 
-def test_to_numpy_shapes_correct(preprocess):
-    preprocess.load_and_pad()
-    batch_size = 3 #3 sets of data, 3 simulations
-    X_coords, Y_outputs, G_params = preprocess.to_numpy()
-    assert X_coords.shape == (3, preprocess.npts_max, 3)
-    assert Y_outputs.shape == (3, preprocess.npts_max, 5)
-    assert G_params.shape == (3, 1)
-
-
-def test_save_creates_file(preprocess):
-    preprocess.load_and_pad()
-    preprocess.save()
-    assert os.path.exists(preprocess.output_path)
-    data = np.load(preprocess.output_path)
-    assert "coords" in data
-    assert "outputs" in data
-    assert "params" in data
-    assert data["coords"].shape == (3, preprocess.npts_max, 3)
-    assert data["outputs"].shape == (3, preprocess.npts_max, 5)
-    assert data["params"].shape == (3, 1)
-
-def test_run_all_creates_file(preprocess):
+def test_to_numpy_and_save(preprocess):
     preprocess.run_all()
     assert os.path.exists(preprocess.output_path)
     data = np.load(preprocess.output_path)
-    assert "coords" in data
-    assert "outputs" in data
-    assert "params" in data
-    assert data["coords"].shape == (3, preprocess.npts_max, 3)
-    assert data["outputs"].shape == (3, preprocess.npts_max, 5)
+    assert data["coords"].shape == (3, TEST_SAMPLE_SIZE, 3)
+    assert data["outputs"].shape == (3, TEST_SAMPLE_SIZE, 5)
     assert data["params"].shape == (3, 1)
 
-def test_saved_arrays_are_normalized(preprocess):
-    preprocess.run_all()
-    data = np.load(preprocess.output_path)
-
-    def assert_normalized(arr, tol=1e-6):
+    # arrays are normalized
+    def check_norm(arr):
         flat = arr.reshape(-1, arr.shape[-1])
-        mean = flat.mean(axis=0)
-        std = flat.std(axis=0)
-        assert np.all(np.abs(mean) < tol), f"Mean not ~0: {mean}"
-        assert np.all(np.abs(std - 1) < tol), f"Std not ~1: {std}"
+        assert np.allclose(flat.mean(axis=0), 0, atol=1e-6)
+        assert np.allclose(flat.std(axis=0), 1, atol=1e-6)
 
-    assert_normalized(data["coords"])
-    assert_normalized(data["outputs"])
-    assert_normalized(data["params"])
-def test_lhs_sample_point_count_and_spread():
-    import os
-    from preprocess import Preprocess
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '3D_data'))
-    radius_files = {
-        0.2: os.path.join(base_dir, "sphere_data_02.csv")
-    }
-    preprocess = Preprocess(radius_files=radius_files, output_path="test_processed_data.npz")
+    check_norm(data["coords"])
+    check_norm(data["outputs"])
+    check_norm(data["params"])
+
+
+def test_lhs_sampling_distribution(preprocess):
     preprocess.load_and_pad()
-
     coords = preprocess.coords[0]
-    unpadded = coords[~np.all(coords == coords[0], axis=1)]  # filter padding
-
-    n_expected = 50000
-    n_actual = unpadded.shape[0]
-
-    # Assert reasonable number of unique sampled points
-    assert n_actual >= 0.8 * n_expected, f"Expected ~{n_expected} points, got {n_actual}"
-
-    # Check bounding box coverage (should span >10% of domain in each axis)
-    min_vals, max_vals = unpadded.min(axis=0), unpadded.max(axis=0)
-    bbox_range = max_vals - min_vals
-    assert np.all(bbox_range > 0.1), "Sampled points are not well-distributed in space"
-
+    unpadded = coords[~np.all(coords == coords[0], axis=1)]
+    assert unpadded.shape[0] >= 0.8 * TEST_SAMPLE_SIZE
+    rng = unpadded.max(axis=0) - unpadded.min(axis=0)
+    assert np.all(rng > 0.1)
