@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     # # Load model and stats
     # file_to_load = "3D_data/sphere_data_075.csv"
-    # file_to_make = "sphere_data_075.vtk"
+    # file_to_make = "3D_data/sphere_data_075.vtk"
     # device = "cpu"
     # from inference import Inference
     # inference = Inference(model_path="fusion_deeponet.pt", stats_path="processed_data.npz", device=device)
