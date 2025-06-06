@@ -52,8 +52,34 @@ def radius_file_dict(tmp_path):
 
 @pytest.fixture
 def preprocess(radius_file_dict, tmp_path):
-    return Preprocess(radius_files=radius_file_dict, output_path=str(tmp_path / "processed.npz"))
+    return Preprocess(radius_files=radius_file_dict, dimension=3, output_path=str(tmp_path / "processed.npz"))
 
+@pytest.fixture
+def radius_file_dict_2d(tmp_path):
+    df = pd.DataFrame({
+        "X (m)": np.linspace(0, 1, 10),
+        "Y (m)": np.linspace(0, 1, 10),
+        "Z (m)": np.zeros(10),
+        "Density (kg/m^3)": np.linspace(1, 2, 10),
+        "Velocity[i] (m/s)": np.linspace(0, 1, 10),
+        "Velocity[j] (m/s)": np.linspace(0, 1, 10),
+        "Velocity[k] (m/s)": np.linspace(0, 1, 10),
+        "Absolute Pressure (Pa)": np.linspace(0, 1, 10),
+    })
+    mapping = {}
+    for r in [0.5]:
+        path = tmp_path / f"data_{r}.csv"
+        df.to_csv(path, index=False)
+        mapping[r] = str(path)
+    return mapping
+
+
+def test_no_lhs_when_dimension_2(radius_file_dict_2d, tmp_path):
+    p = Preprocess(radius_files=radius_file_dict_2d, dimension=2, output_path=str(tmp_path / "out.npz"))
+    p.load_and_pad()
+    coords = p.coords[0]
+    z_column = coords[:, 2]
+    assert p.lhs_applied is False
 
 def test_initial_state(preprocess):
     assert preprocess.coords == []
