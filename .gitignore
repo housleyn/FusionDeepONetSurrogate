@@ -2,7 +2,11 @@
 *.sim
 *.sim~
 
-# Ignore CSV files
+# 
+
+# Ignore CSV files and vtk files and npz files
+*.npz
+*.vtk
 *.csv
 
 # Byte-compiled / optimized / DLL files
