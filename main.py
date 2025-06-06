@@ -44,8 +44,8 @@ def main():
     return loss_history, test_loss_history
 
 def radius_file_dict():
-        base_dir = os.path.dirname(__file__)
-        data_dir = os.path.join(base_dir, "3D_data")
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "3D_data"))
+        
         return {
             0.2: os.path.join(base_dir, "sphere_data_02.csv"),
             0.3: os.path.join(base_dir, "sphere_data_03.csv"),
@@ -99,27 +99,27 @@ if __name__ == "__main__":
     # plt.show()
 
 
-    # Load model and stats
-    file_to_load = "sphere_data_075.csv"
-    file_to_make = "sphere_data_075.vtk"
-    device = "cpu"
-    from inference import Inference
-    inference = Inference(model_path="fusion_deeponet.pt", stats_path="processed_data.npz", device=device)
+    # # Load model and stats
+    # file_to_load = "3D_data/sphere_data_075.csv"
+    # file_to_make = "sphere_data_075.vtk"
+    # device = "cpu"
+    # from inference import Inference
+    # inference = Inference(model_path="fusion_deeponet.pt", stats_path="processed_data.npz", device=device)
 
-    # Prepare input
-    coords_np, radius_val = inference.load_csv_input(file_to_load)
+    # # Prepare input
+    # coords_np, radius_val = inference.load_csv_input(file_to_load)
 
-    # Predict
-    output = inference.predict(coords_np, radius_val)
+    # # Predict
+    # output = inference.predict(coords_np, radius_val)
 
-    # output shape = (n_pts, 5)
+    # # output shape = (n_pts, 5)
 
-    # Save to CSV
-    inference.save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")
+    # # Save to CSV
+    # inference.save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")
 
-    # Save to VTK for visualization
-    inference.save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
-    csv_to_vtk(file_to_load, file_to_make)
+    # # Save to VTK for visualization
+    # inference.save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
+    # csv_to_vtk(file_to_load, file_to_make)
 
     
     # mesh = pv.read("predicted_output.vtk")
