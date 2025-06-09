@@ -1,7 +1,7 @@
 import torch 
 class MethodsTrainer:
-    def train(self, train_loader, test_loader, num_epochs=1000, print_every=100):
-        self.model.train()
+    def train(self, train_loader, test_loader, num_epochs, print_every):
+        
         loss_history, test_loss_history = [], []
         # for coords, params, targets in train_loader:
         #     print("coords shape:", coords.shape)
@@ -11,6 +11,8 @@ class MethodsTrainer:
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
+            self.model.train()
+            total_samples = 0
 
             for coords, params, targets in train_loader:
                 coords = coords.to(self.device)
@@ -23,10 +25,13 @@ class MethodsTrainer:
                 loss.backward()
                 self.optimizer.step()
 
-                epoch_loss += loss.item()
+                batch_size = targets.size(0)
+                epoch_loss += loss.item() * batch_size
+                total_samples += batch_size
 
-            self.lr_scheduler.step()
-            avg_loss = epoch_loss / len(train_loader)
+
+            # self.lr_scheduler.step()
+            avg_loss = epoch_loss / total_samples
             loss_history.append(avg_loss)
 
             # Evaluate on the test set
@@ -42,6 +47,7 @@ class MethodsTrainer:
     def evaluate(self, dataloader):
         self.model.eval()
         total_loss = 0.0
+        total_samples = 0
         with torch.no_grad():
             for coords, params, targets in dataloader:
                 coords = coords.to(self.device)
@@ -50,9 +56,11 @@ class MethodsTrainer:
 
                 outputs = self.model(coords, params)
                 loss = self.criterion(outputs, targets)
-                total_loss += loss.item()
+                batch_size = targets.size(0)
+                total_loss += loss.item() * batch_size
+                total_samples += batch_size
 
-        avg_loss = total_loss / len(dataloader)
+        avg_loss = total_loss / total_samples
         return avg_loss
 
 
