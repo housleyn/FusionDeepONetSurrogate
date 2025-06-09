@@ -15,7 +15,7 @@ def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
     batch_size = 1
-    num_epochs = 1
+    num_epochs = 100
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
@@ -44,18 +44,26 @@ def main():
     return loss_history, test_loss_history
 
 def radius_file_dict():
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "3D_data"))
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "2D_data"))
         
         return {
-            0.2: os.path.join(base_dir, "sphere_data_02.csv"),
-            0.3: os.path.join(base_dir, "sphere_data_03.csv"),
-            0.4: os.path.join(base_dir, "sphere_data_04.csv"),
-            0.5: os.path.join(base_dir, "sphere_data_05.csv"),
-            0.6: os.path.join(base_dir, "sphere_data_06.csv"),
-            0.7: os.path.join(base_dir, "sphere_data_07.csv"),
-            0.8: os.path.join(base_dir, "sphere_data_08.csv"),
-            0.9: os.path.join(base_dir, "sphere_data_09.csv"),
-            1.0: os.path.join(base_dir, "sphere_data_1.csv"),
+            0.2: os.path.join(base_dir, "2Dsphere_data_02.csv"),
+            0.25: os.path.join(base_dir, "2Dsphere_data_025.csv"),
+            0.3: os.path.join(base_dir, "2Dsphere_data_03.csv"),
+            0.35: os.path.join(base_dir, "2Dsphere_data_035.csv"),
+            0.4: os.path.join(base_dir, "2Dsphere_data_04.csv"),
+            0.45: os.path.join(base_dir, "2Dsphere_data_045.csv"),
+            0.5: os.path.join(base_dir, "2Dsphere_data_05.csv"),
+            0.55: os.path.join(base_dir, "2Dsphere_data_055.csv"),
+            0.6: os.path.join(base_dir, "2Dsphere_data_06.csv"),
+            0.65: os.path.join(base_dir, "2Dsphere_data_065.csv"),
+            0.7: os.path.join(base_dir, "2Dsphere_data_07.csv"),
+            0.75: os.path.join(base_dir, "2Dsphere_data_075.csv"),
+            0.8: os.path.join(base_dir, "2Dsphere_data_08.csv"),
+            0.85: os.path.join(base_dir, "2Dsphere_data_085.csv"),
+            0.9: os.path.join(base_dir, "2Dsphere_data_09.csv"),
+            0.95: os.path.join(base_dir, "2Dsphere_data_095.csv"),
+            1.0: os.path.join(base_dir, "2Dsphere_data_1.csv"),
         }
 
 def csv_to_vtk(csv_path, vtk_path):
@@ -82,7 +90,7 @@ def csv_to_vtk(csv_path, vtk_path):
     cloud.save(vtk_path)
 
 if __name__ == "__main__":
-    preprocess = Preprocess(radius_files=radius_file_dict(), output_path="processed_data.npz")
+    preprocess = Preprocess(radius_files=radius_file_dict(),dimension=2, output_path="processed_data.npz")
     print("began training")
     preprocess.run_all()
     loss_history, test_loss_history = main()

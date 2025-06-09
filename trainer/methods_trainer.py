@@ -3,11 +3,11 @@ class MethodsTrainer:
     def train(self, train_loader, test_loader, num_epochs=1000, print_every=100):
         self.model.train()
         loss_history, test_loss_history = [], []
-        for coords, params, targets in train_loader:
-            print("coords shape:", coords.shape)
-            print("params shape:", params.shape)
-            print("targets shape:", targets.shape)
-            break
+        # for coords, params, targets in train_loader:
+        #     print("coords shape:", coords.shape)
+        #     print("params shape:", params.shape)
+        #     print("targets shape:", targets.shape)
+        #     break
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
