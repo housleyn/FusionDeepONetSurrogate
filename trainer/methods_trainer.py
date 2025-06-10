@@ -14,14 +14,16 @@ class MethodsTrainer:
             self.model.train()
             total_samples = 0
 
-            for coords, params, targets in train_loader:
+            for coords, params, targets, mask in train_loader:
                 coords = coords.to(self.device)
                 params = params.to(self.device)
                 targets = targets.to(self.device)
+                mask = mask.to(self.device)
 
                 self.optimizer.zero_grad()
                 outputs = self.model(coords, params)
-                loss = self.criterion(outputs, targets)
+                diff = (outputs - targets) * mask.unsqueeze(-1)
+                loss = (diff ** 2).sum() / mask.sum()
                 loss.backward()
                 self.optimizer.step()
 
@@ -49,13 +51,15 @@ class MethodsTrainer:
         total_loss = 0.0
         total_samples = 0
         with torch.no_grad():
-            for coords, params, targets in dataloader:
+            for coords, params, targets, mask in dataloader:
                 coords = coords.to(self.device)
                 params = params.to(self.device)
                 targets = targets.to(self.device)
+                mask = mask.to(self.device)
 
                 outputs = self.model(coords, params)
-                loss = self.criterion(outputs, targets)
+                diff = (outputs - targets) * mask.unsqueeze(-1)
+                loss = (diff ** 2).sum() / mask.sum()
                 batch_size = targets.size(0)
                 total_loss += loss.item() * batch_size
                 total_samples += batch_size

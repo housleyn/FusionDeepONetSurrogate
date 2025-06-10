@@ -8,3 +8,4 @@ class BasePreprocess:
         self.npts_max = 0  # max elements determined based on data
         self.dimension = dimension
         self.lhs_applied = False
+        self.masks = []

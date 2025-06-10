@@ -10,7 +10,8 @@ def create_loaders():
     coords = torch.rand(4, 5, 3)
     params = torch.rand(4, 1)
     outputs = torch.rand(4, 5, 5)
-    dataset = torch.utils.data.TensorDataset(coords, params, outputs)
+    mask = torch.ones(4, 5, dtype=torch.bool)
+    dataset = torch.utils.data.TensorDataset(coords, params, outputs, mask)
     loader = torch.utils.data.DataLoader(dataset, batch_size=2)
     return loader
 
