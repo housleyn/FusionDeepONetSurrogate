@@ -42,3 +42,33 @@ def test_get_dataloader(tmp_path):
     train, test = data.get_dataloader(batch_size=2, shuffle=False, test_size=0.5)
     total = len(train.dataset) + len(test.dataset)
     assert total == len(data)
+
+
+def test_initialization_dtypes(tmp_path):
+    npz = create_npz(tmp_path)
+    data = Data(str(npz))
+    assert data.coords.dtype == torch.float32
+    assert data.outputs.dtype == torch.float32
+    assert data.params.dtype == torch.float32
+    assert data.mask.dtype == torch.bool
+
+
+def test_getitem_returns_correct_values(tmp_path):
+    npz = create_npz(tmp_path)
+    raw = np.load(npz)
+    data = Data(str(npz))
+    idx = 2
+    c, p, o, m = data[idx]
+    assert np.allclose(c.numpy(), raw['coords'][idx])
+    assert np.allclose(o.numpy(), raw['outputs'][idx])
+    assert np.allclose(p.numpy(), raw['params'][idx])
+    assert np.allclose(m.numpy(), raw['mask'][idx])
+
+
+def test_get_dataloader_split_sizes(tmp_path):
+    npz = create_npz(tmp_path)
+    data = Data(str(npz))
+    train, test = data.get_dataloader(batch_size=1, shuffle=False, test_size=0.25)
+    assert len(train.dataset) + len(test.dataset) == len(data)
+    assert len(test.dataset) == int(len(data) * 0.25)
+    assert len(next(iter(train))[0]) == 1

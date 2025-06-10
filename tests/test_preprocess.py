@@ -127,3 +127,62 @@ def test_lhs_sampling_distribution(preprocess):
     assert unpadded.shape[0] >= 0.8 * TEST_SAMPLE_SIZE
     rng = unpadded.max(axis=0) - unpadded.min(axis=0)
     assert np.all(rng > 0.1)
+
+def test_pad_functionality():
+    p = Preprocess(radius_files={}, dimension=3, output_path="out.npz")
+    p.npts_max = 5
+    arr = np.array([[1, 2], [3, 4], [5, 6]])
+    padded, mask = p._pad(arr)
+    assert padded.shape == (5, 2)
+    assert mask.tolist() == [True, True, True, False, False]
+    assert np.all(padded[3:] == arr[-1])
+
+
+def test_normalize_function():
+    p = Preprocess(radius_files={}, dimension=3, output_path="out.npz")
+    data = np.array([[1.0, 2.0], [3.0, 4.0]])
+    norm, mean, std = p._normalize(data)
+    assert np.allclose(mean, [2.0, 3.0])
+    assert np.allclose(std, [1.0, 1.0])
+    assert np.allclose(norm.mean(axis=0), 0.0)
+    assert np.allclose(norm.std(axis=0), 1.0)
+
+
+def test_lhs_applied_for_3d(preprocess):
+    preprocess.load_and_pad()
+    assert preprocess.lhs_applied is True
+    for c in preprocess.coords:
+        assert c.shape[0] == TEST_SAMPLE_SIZE
+
+
+def test_to_numpy_shapes(preprocess):
+    preprocess.load_and_pad()
+    coords, outputs, params, mask = preprocess.to_numpy()
+    assert coords.shape == (3, TEST_SAMPLE_SIZE, 3)
+    assert outputs.shape == (3, TEST_SAMPLE_SIZE, 5)
+    assert params.shape == (3, 1)
+    assert mask.shape == (3, TEST_SAMPLE_SIZE)
+
+
+def test_save_contains_statistics(preprocess, tmp_path):
+    preprocess.load_and_pad()
+    preprocess.output_path = str(tmp_path / "tmp.npz")
+    preprocess.save()
+    data = np.load(preprocess.output_path)
+    for key in [
+        "coords_mean",
+        "coords_std",
+        "outputs_mean",
+        "outputs_std",
+        "radii_mean",
+        "radii_std",
+    ]:
+        assert key in data
+    assert data["mask"].dtype == np.bool_
+
+
+def test_run_all_dimension_2(radius_file_dict_2d, tmp_path):
+    p = Preprocess(radius_files=radius_file_dict_2d, dimension=2, output_path=str(tmp_path / "out2.npz"))
+    p.run_all()
+    data = np.load(p.output_path)
+    assert data["coords"].shape[0] == 1
