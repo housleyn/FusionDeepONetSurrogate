@@ -86,18 +86,16 @@ def test_initial_state(preprocess):
     assert preprocess.radii == []
     assert preprocess.outputs == []
     assert preprocess.npts_max == 0
-    assert preprocess.masks == []
 
 
 def test_load_and_pad(preprocess):
     preprocess.load_and_pad()
     assert len(preprocess.coords) == 3
     assert preprocess.npts_max == TEST_SAMPLE_SIZE
-    for c, r, o, m in zip(preprocess.coords, preprocess.radii, preprocess.outputs, preprocess.masks):
+    for c, r, o in zip(preprocess.coords, preprocess.radii, preprocess.outputs):
         assert c.shape[0] == TEST_SAMPLE_SIZE
         assert r.shape[0] == TEST_SAMPLE_SIZE
         assert o.shape[0] == TEST_SAMPLE_SIZE
-        assert m.shape[0] == TEST_SAMPLE_SIZE
 
 
 def test_to_numpy_and_save(preprocess):
@@ -107,7 +105,6 @@ def test_to_numpy_and_save(preprocess):
     assert data["coords"].shape == (3, TEST_SAMPLE_SIZE, 3)
     assert data["outputs"].shape == (3, TEST_SAMPLE_SIZE, 5)
     assert data["params"].shape == (3, 1)
-    assert data["mask"].shape == (3, TEST_SAMPLE_SIZE)
 
     # arrays are normalized
     def check_norm(arr):
@@ -132,9 +129,8 @@ def test_pad_functionality():
     p = Preprocess(radius_files={}, dimension=3, output_path="out.npz")
     p.npts_max = 5
     arr = np.array([[1, 2], [3, 4], [5, 6]])
-    padded, mask = p._pad(arr)
+    padded = p._pad(arr)
     assert padded.shape == (5, 2)
-    assert mask.tolist() == [True, True, True, False, False]
     assert np.all(padded[3:] == arr[-1])
 
 
@@ -157,11 +153,10 @@ def test_lhs_applied_for_3d(preprocess):
 
 def test_to_numpy_shapes(preprocess):
     preprocess.load_and_pad()
-    coords, outputs, params, mask = preprocess.to_numpy()
+    coords, outputs, params = preprocess.to_numpy()
     assert coords.shape == (3, TEST_SAMPLE_SIZE, 3)
     assert outputs.shape == (3, TEST_SAMPLE_SIZE, 5)
     assert params.shape == (3, 1)
-    assert mask.shape == (3, TEST_SAMPLE_SIZE)
 
 
 def test_save_contains_statistics(preprocess, tmp_path):
@@ -178,7 +173,6 @@ def test_save_contains_statistics(preprocess, tmp_path):
         "radii_std",
     ]:
         assert key in data
-    assert data["mask"].dtype == np.bool_
 
 
 def test_run_all_dimension_2(radius_file_dict_2d, tmp_path):
