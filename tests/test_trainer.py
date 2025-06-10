@@ -10,8 +10,7 @@ def create_loaders():
     coords = torch.rand(4, 5, 3)
     params = torch.rand(4, 1)
     outputs = torch.rand(4, 5, 5)
-    mask = torch.ones(4, 5, dtype=torch.bool)
-    dataset = torch.utils.data.TensorDataset(coords, params, outputs, mask)
+    dataset = torch.utils.data.TensorDataset(coords, params, outputs)
     loader = torch.utils.data.DataLoader(dataset, batch_size=2)
     return loader
 
@@ -34,26 +33,25 @@ class DummyModel(torch.nn.Module):
         return torch.zeros(batch, n, 1) + self.w
 
 
-def create_mask_loader():
+def create_simple_loader():
     coords = torch.zeros(1, 4, 3)
     params = torch.zeros(1, 1)
     targets = torch.ones(1, 4, 1)
-    mask = torch.tensor([[1, 0, 1, 0]], dtype=torch.bool)
-    dataset = torch.utils.data.TensorDataset(coords, params, targets, mask)
+    dataset = torch.utils.data.TensorDataset(coords, params, targets)
     return torch.utils.data.DataLoader(dataset, batch_size=1)
 
 
-def test_evaluate_uses_mask():
-    loader = create_mask_loader()
+def test_evaluate():
+    loader = create_simple_loader()
     model = DummyModel()
     trainer = Trainer(model, loader, device="cpu", lr=0.0)
     loss = trainer.evaluate(loader)
-    expected = ((torch.zeros(4, 1) - torch.ones(4, 1)) ** 2 * torch.tensor([[1, 0, 1, 0]]).unsqueeze(-1)).sum() / 2
+    expected = torch.mean((torch.zeros(4, 1) - torch.ones(4, 1)) ** 2)
     assert torch.isclose(torch.tensor(loss), expected)
 
 
-def test_train_uses_mask_no_update():
-    loader = create_mask_loader()
+def test_train_no_update():
+    loader = create_simple_loader()
     model = DummyModel()
     trainer = Trainer(model, loader, device="cpu", lr=0.0)
     train_hist, _ = trainer.train(loader, loader, num_epochs=1, print_every=1)
