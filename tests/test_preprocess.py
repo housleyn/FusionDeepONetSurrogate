@@ -86,16 +86,18 @@ def test_initial_state(preprocess):
     assert preprocess.radii == []
     assert preprocess.outputs == []
     assert preprocess.npts_max == 0
+    assert preprocess.masks == []
 
 
 def test_load_and_pad(preprocess):
     preprocess.load_and_pad()
     assert len(preprocess.coords) == 3
     assert preprocess.npts_max == TEST_SAMPLE_SIZE
-    for c, r, o in zip(preprocess.coords, preprocess.radii, preprocess.outputs):
+    for c, r, o, m in zip(preprocess.coords, preprocess.radii, preprocess.outputs, preprocess.masks):
         assert c.shape[0] == TEST_SAMPLE_SIZE
         assert r.shape[0] == TEST_SAMPLE_SIZE
         assert o.shape[0] == TEST_SAMPLE_SIZE
+        assert m.shape[0] == TEST_SAMPLE_SIZE
 
 
 def test_to_numpy_and_save(preprocess):
@@ -105,6 +107,7 @@ def test_to_numpy_and_save(preprocess):
     assert data["coords"].shape == (3, TEST_SAMPLE_SIZE, 3)
     assert data["outputs"].shape == (3, TEST_SAMPLE_SIZE, 5)
     assert data["params"].shape == (3, 1)
+    assert data["mask"].shape == (3, TEST_SAMPLE_SIZE)
 
     # arrays are normalized
     def check_norm(arr):

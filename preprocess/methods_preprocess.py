@@ -24,10 +24,29 @@ class MethodsPreprocess:
 
         self.npts_max = max(c.shape[0] for c in self.coords)
 
+<<<<<<< HEAD
         #pad all arrays to the maximum number of points
         self.coords = [self._pad(c) for c in self.coords]
         self.radii = [self._pad(r) for r in self.radii]
         self.outputs = [self._pad(o) for o in self.outputs]
+=======
+        padded_coords = []
+        padded_radii = []
+        padded_outputs = []
+        self.masks = []
+        for c, r, o in zip(self.coords, self.radii, self.outputs):
+            c_pad, mask = self._pad(c)
+            r_pad, _ = self._pad(r)
+            o_pad, _ = self._pad(o)
+            padded_coords.append(c_pad)
+            padded_radii.append(r_pad)
+            padded_outputs.append(o_pad)
+            self.masks.append(mask)
+
+        self.coords = padded_coords
+        self.radii = padded_radii
+        self.outputs = padded_outputs
+>>>>>>> 469b49d78137759018a25e058526670b5fbdfff2
 
         # Normalize AFTER padding
         coords_flat = np.vstack(self.coords)
@@ -68,15 +87,23 @@ class MethodsPreprocess:
         return coords, outputs
     
     def _pad(self, arr):
-        return np.pad(arr, ((0, self.npts_max - arr.shape[0]), (0, 0)), mode="edge")
+        n_pad = self.npts_max - arr.shape[0]
+        mask = np.concatenate([
+            np.ones(arr.shape[0], dtype=bool),
+            np.zeros(n_pad, dtype=bool),
+        ])
+        padded = np.pad(arr, ((0, n_pad), (0, 0)), mode="edge")
+        return padded, mask
 
     def to_numpy(self):
         X_coords = np.stack(self.coords)
         Y_outputs = np.stack(self.outputs)
         G_params = np.stack(self.radii)[:, 0, :]  # extract 1 value per sample
-        return X_coords, Y_outputs, G_params
+        M_masks = np.stack(self.masks)
+        return X_coords, Y_outputs, G_params, M_masks
 
     def save(self):
+<<<<<<< HEAD
         X_coords, Y_outputs, G_params = self.to_numpy()
         np.savez(self.output_path,
             coords=X_coords,           # shape: (num_samples, npts_max, 3)
@@ -89,6 +116,16 @@ class MethodsPreprocess:
             radii_mean=self.radii_mean,       # shape: (1,)
             radii_std=self.radii_std          # shape: (1,)
         )
+=======
+        X_coords, Y_outputs, G_params, M_masks = self.to_numpy()
+        np.savez(self.output_path, coords=X_coords, outputs=Y_outputs, params=G_params, mask=M_masks,
+                coords_mean=self.coords_mean,
+                coords_std=self.coords_std,
+                outputs_mean=self.outputs_mean,
+                outputs_std=self.outputs_std,
+                radii_mean=self.radii_mean,
+                radii_std=self.radii_std)
+>>>>>>> 469b49d78137759018a25e058526670b5fbdfff2
 
     def run_all(self):
         self.load_and_pad()
