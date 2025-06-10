@@ -24,6 +24,7 @@ class MethodsPreprocess:
 
         self.npts_max = max(c.shape[0] for c in self.coords)
 
+        #pad all arrays to the maximum number of points
         self.coords = [self._pad(c) for c in self.coords]
         self.radii = [self._pad(r) for r in self.radii]
         self.outputs = [self._pad(o) for o in self.outputs]
@@ -37,7 +38,7 @@ class MethodsPreprocess:
         outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
         radii_flat, self.radii_mean, self.radii_std = self._normalize(radii_flat)
 
-        # Reassign normalized values
+        # unflatten after the flattening for normalization, 
         idx = 0
         for i in range(len(self.coords)):
             n = self.coords[i].shape[0]
@@ -46,7 +47,7 @@ class MethodsPreprocess:
             self.radii[i] = radii_flat[idx:idx+n]
             idx += n
 
-    def LHS(self, coords_full, outputs_full):
+    def LHS(self, coords_full, outputs_full): # Latin Hypercube Sampling, 500,000 samples per simulation
         N_sample = 500000
         coords_min = coords_full.min(axis=0)
         coords_max = coords_full.max(axis=0)
@@ -77,13 +78,17 @@ class MethodsPreprocess:
 
     def save(self):
         X_coords, Y_outputs, G_params = self.to_numpy()
-        np.savez(self.output_path, coords=X_coords, outputs=Y_outputs, params=G_params,
-                coords_mean=self.coords_mean,
-                coords_std=self.coords_std,
-                outputs_mean=self.outputs_mean,
-                outputs_std=self.outputs_std,
-                radii_mean=self.radii_mean,
-                radii_std=self.radii_std)
+        np.savez(self.output_path,
+            coords=X_coords,           # shape: (num_samples, npts_max, 3)
+            outputs=Y_outputs,         # shape: (num_samples, npts_max, output_dim)
+            params=G_params,           # shape: (num_samples, 1)
+            coords_mean=self.coords_mean,     # shape: (3,)
+            coords_std=self.coords_std,       # shape: (3,)
+            outputs_mean=self.outputs_mean,   # shape: (output_dim,)
+            outputs_std=self.outputs_std,     # shape: (output_dim,)
+            radii_mean=self.radii_mean,       # shape: (1,)
+            radii_std=self.radii_std          # shape: (1,)
+        )
 
     def run_all(self):
         self.load_and_pad()

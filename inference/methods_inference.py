@@ -47,6 +47,8 @@ class MethodsInference:
         coords_np = df[["X (m)", "Y (m)", "Z (m)"]].values
         if "Sphere Radius" in df.columns:
             radius_val = np.float32(df["Sphere Radius"].iloc[0])
+        elif "sphere_radius" in df.columns:
+            radius_val = np.float32(df["sphere_radius"].iloc[0])
         else:
             raise ValueError("CSV must contain a 'Sphere Radius' column.")
         return coords_np, radius_val
