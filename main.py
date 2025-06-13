@@ -15,13 +15,13 @@ def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
     batch_size = 1
-    num_epochs = 1000
+    num_epochs = 5
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
     # === Load Data ===
     data = Data(npz_path)
-    train_loader, test_loader = data.get_dataloader(batch_size, shuffle=True, test_size=4/17)
+    train_loader, test_loader = data.get_dataloader(batch_size, shuffle=True, test_size=3/17)
 
     # === Create Model ===
     model = FusionDeepONet(

@@ -3,11 +3,25 @@ class MethodsTrainer:
     def train(self, train_loader, test_loader, num_epochs, print_every):
         
         loss_history, test_loss_history = [], []
-        # for coords, params, targets in train_loader:
-        #     print("coords shape:", coords.shape)
-        #     print("params shape:", params.shape)
-        #     print("targets shape:", targets.shape)
-        #     break
+        for coords, params, targets in train_loader:
+            # Print shapes
+            print("coords shape:", coords.shape)
+            print("params shape:", params.shape)
+            print("targets shape:", targets.shape)
+
+            # Print column headings and first row for coords
+            print("coords columns: ['X', 'Y', 'Z'] (example)")
+            print("coords first row:", coords[0, 0].cpu().numpy())
+
+            # Print column headings and first row for params
+            print("params columns: ['radius'] (example)")
+            print("params first row:", params[0].cpu().numpy())
+
+            # Print column headings and first row for targets
+            print("targets columns: ['u', 'v', 'w', 'rho', 'p'] (example)")
+            print("targets first row:", targets[0, 0].cpu().numpy())
+
+            break  # Remove this break if you want to print for every batch
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
