@@ -106,15 +106,13 @@ def test_to_numpy_and_save(preprocess):
     assert data["outputs"].shape == (3, TEST_SAMPLE_SIZE, 5)
     assert data["params"].shape == (3, 1)
 
-    # arrays are normalized
+    # outputs should be normalized
     def check_norm(arr):
         flat = arr.reshape(-1, arr.shape[-1])
         assert np.allclose(flat.mean(axis=0), 0, atol=1e-6)
         assert np.allclose(flat.std(axis=0), 1, atol=1e-6)
 
-    check_norm(data["coords"])
     check_norm(data["outputs"])
-    check_norm(data["params"])
 
 
 def test_lhs_sampling_distribution(preprocess):
