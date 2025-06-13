@@ -40,22 +40,27 @@ class MethodsPreprocess:
         self.radii = padded_radii
         self.outputs = padded_outputs
 
-        # Normalize AFTER padding
+        # Compute statistics without normalizing coordinates or radii
         coords_flat = np.vstack(self.coords)
         outputs_flat = np.vstack(self.outputs)
         radii_flat = np.vstack(self.radii)
 
-        coords_flat, self.coords_mean, self.coords_std = self._normalize(coords_flat)
-        outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
-        radii_flat, self.radii_mean, self.radii_std = self._normalize(radii_flat)
+        # store stats for reference but only normalize flow variables
+        self.coords_mean = np.mean(coords_flat, axis=0)
+        self.coords_std = np.std(coords_flat, axis=0)
+        self.coords_std[self.coords_std == 0] = 1
 
-        # unflatten after the flattening for normalization, 
+        self.radii_mean = np.mean(radii_flat, axis=0)
+        self.radii_std = np.std(radii_flat, axis=0)
+        self.radii_std[self.radii_std == 0] = 1
+
+        outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
+
+        # replace outputs with normalized values
         idx = 0
-        for i in range(len(self.coords)):
-            n = self.coords[i].shape[0]
-            self.coords[i] = coords_flat[idx:idx+n]
+        for i in range(len(self.outputs)):
+            n = self.outputs[i].shape[0]
             self.outputs[i] = outputs_flat[idx:idx+n]
-            self.radii[i] = radii_flat[idx:idx+n]
             idx += n
 
     def LHS(self, coords_full, outputs_full): # Latin Hypercube Sampling, 500,000 samples per simulation

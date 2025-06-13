@@ -25,8 +25,8 @@ class MethodsInference:
         }
 
     def _normalize(self, coords, radius):
-        coords = (coords - self.stats["coords_mean"]) / self.stats["coords_std"].float()
-        radius = (radius - self.stats["radii_mean"]) / self.stats["radii_std"].float()
+        # Coordinates and radius were not normalized during training,
+        # so simply return them unchanged
         return coords, radius
 
     def _denormalize(self, output):
