@@ -17,7 +17,7 @@ def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
     batch_size = 1
-    num_epochs = 50
+    num_epochs = 50000
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 

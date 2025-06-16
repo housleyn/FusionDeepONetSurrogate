@@ -12,4 +12,4 @@ class BaseModel(nn.Module):
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers)
 
         self.trunk = MLP(coord_dim, hidden_size, hidden_size, num_hidden_layers)
-        self.trunk_final = nn.Linear(hidden_size, hidden_size)
+        
