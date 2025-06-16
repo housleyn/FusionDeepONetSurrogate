@@ -21,31 +21,31 @@ class MethodsPreprocess:
             param_vec = df[["a", "b"]].to_numpy()
 
             self.coords.append(coords)
-            self.radii.append(param_vec)
+            self.params.append(param_vec)
             self.outputs.append(outputs)
 
         self.npts_max = max(c.shape[0] for c in self.coords)
 
-        # pad all arrays to the maximum number of points
-        padded_coords = []
-        padded_radii = []
-        padded_outputs = []
-        for c, r, o in zip(self.coords, self.radii, self.outputs):
-            c_pad = self._pad(c)
-            r_pad = self._pad(r)
-            o_pad = self._pad(o)
-            padded_coords.append(c_pad)
-            padded_radii.append(r_pad)
-            padded_outputs.append(o_pad)
+        # # pad all arrays to the maximum number of points
+        # padded_coords = []
+        # padded_radii = []
+        # padded_outputs = []
+        # for c, r, o in zip(self.coords, self.radii, self.outputs):
+        #     c_pad = self._pad(c)
+        #     r_pad = self._pad(r)
+        #     o_pad = self._pad(o)
+        #     padded_coords.append(c_pad)
+        #     padded_radii.append(r_pad)
+        #     padded_outputs.append(o_pad)
 
-        self.coords = padded_coords
-        self.radii = padded_radii
-        self.outputs = padded_outputs
+        # self.coords = padded_coords
+        # self.radii = padded_radii
+        # self.outputs = padded_outputs
 
         # Compute statistics without normalizing coordinates or radii
         coords_flat = np.vstack(self.coords)
         outputs_flat = np.vstack(self.outputs)
-        radii_flat = np.vstack(self.radii)
+        radii_flat = np.vstack(self.params)
 
         # store stats for reference but only normalize flow variables
         self.coords_mean = np.mean(coords_flat, axis=0)
@@ -92,9 +92,9 @@ class MethodsPreprocess:
         return padded
 
     def to_numpy(self):
-        X_coords = np.stack(self.coords)
-        Y_outputs = np.stack(self.outputs)
-        G_params = np.stack(self.radii)[:, 0, :]
+        X_coords = np.array(self.coords, dtype=np.float32)
+        Y_outputs = np.array(self.outputs, dtype=np.float32)
+        G_params = np.array(self.params, dtype=np.float32)
         return X_coords, Y_outputs, G_params
 
     def save(self):

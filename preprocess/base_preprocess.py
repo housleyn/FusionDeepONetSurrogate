@@ -16,7 +16,7 @@ class BasePreprocess:
         self.output_path = output_path
         
         self.coords = []
-        self.radii = []
+        self.params = []
         self.outputs = []
         self.npts_max = 0  # max elements determined based on data
         self.dimension = dimension
