@@ -1,5 +1,5 @@
 class BasePreprocess:
-    def __init__(self, radius_files, dimension, output_path="processed_data.npz"):
+    def __init__(self, param_files, dimension, output_path="processed_data.npz"):
         """Initialize the preprocessing object.
 
         Parameters
@@ -12,7 +12,7 @@ class BasePreprocess:
             Where the processed ``npz`` file will be written.
         """
 
-        self.files = radius_files
+        self.files = param_files
         self.output_path = output_path
         
         self.coords = []

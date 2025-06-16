@@ -6,7 +6,7 @@ from sklearn.neighbors import NearestNeighbors
 class MethodsPreprocess:
     def load_and_pad(self):
         # ``self.files`` is a mapping from radius value to CSV file path
-        for radius, path in self.files.items():
+        for path in self.files:
             df = pd.read_csv(path)
             coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
             outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
@@ -18,7 +18,7 @@ class MethodsPreprocess:
                 outputs = outputs_full
 
             # For the vanilla sphere data we only keep the radius as parameter
-            param_vec = np.full((coords.shape[0], 1), radius)
+            param_vec = df[["a", "b"]].to_numpy()
 
             self.coords.append(coords)
             self.radii.append(param_vec)

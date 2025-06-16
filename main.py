@@ -11,6 +11,7 @@ from inference import Inference
 import pyvista as pv
 import pandas as pd
 import glob
+from vanilla_model import VanillaDeepONet
 
 def main():
     # === Configuration ===
@@ -22,10 +23,10 @@ def main():
 
     # === Load Data ===
     data = Data(npz_path)
-    train_loader, test_loader = data.get_dataloader(batch_size, shuffle=True, test_size=3/17)
+    train_loader, test_loader = data.get_dataloader(batch_size, shuffle=False, test_size=.25)
 
     # === Create Model ===
-    model = FusionDeepONet(
+    model = VanillaDeepONet(
         coord_dim=3,
         param_dim=2,
         hidden_size=32,
@@ -96,7 +97,7 @@ def csv_to_vtk(csv_path, vtk_path):
     cloud.save(vtk_path)
 
 if __name__ == "__main__":
-    preprocess = Preprocess(ellipse_files=ellipse_file_list(),dimension=2, output_path="processed_data.npz")
+    preprocess = Preprocess(param_files=ellipse_file_list(),dimension=2, output_path="processed_data.npz")
     preprocess.run_all()
     print("began training")
     loss_history, test_loss_history = main()
