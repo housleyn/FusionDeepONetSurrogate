@@ -9,11 +9,7 @@ class VanillaDeepONet(BaseModel, MethodsModel):
         O = self.out_dim
 
         branch_out = self.branch(params)
-
-        x = coords
-        for layer, act in zip(self.trunk_layers, self.trunk_activations):
-            x = act(layer(x))
-        trunk_out = self.trunk_final(x)
+        trunk_out = self.trunk(coords)
 
         branch_out = branch_out.view(B, O, H)
         trunk_out = trunk_out.view(B, n_pts, 1, H)
