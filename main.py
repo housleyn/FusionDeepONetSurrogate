@@ -10,12 +10,13 @@ import os
 from inference import Inference
 import pyvista as pv
 import pandas as pd
+import glob
 
 def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
     batch_size = 1
-    num_epochs = 5
+    num_epochs = 50000
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
@@ -26,7 +27,7 @@ def main():
     # === Create Model ===
     model = FusionDeepONet(
         coord_dim=3,
-        param_dim=1,
+        param_dim=2,
         hidden_size=32,
         num_hidden_layers=3,
         out_dim=output_dim
@@ -66,6 +67,11 @@ def radius_file_dict():
             1.0: os.path.join(base_dir, "2Dsphere_data_1.csv"),
         }
 
+def ellipse_file_list():
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "ellipse_data"))
+    file_paths = sorted(glob.glob(os.path.join(base_dir, "*.csv")))
+    return file_paths
+
 def csv_to_vtk(csv_path, vtk_path):
     df = pd.read_csv(csv_path)
 
@@ -90,7 +96,7 @@ def csv_to_vtk(csv_path, vtk_path):
     cloud.save(vtk_path)
 
 if __name__ == "__main__":
-    preprocess = Preprocess(radius_files=radius_file_dict(),dimension=2, output_path="processed_data.npz")
+    preprocess = Preprocess(ellipse_files=ellipse_file_list(),dimension=2, output_path="processed_data.npz")
     preprocess.run_all()
     print("began training")
     loss_history, test_loss_history = main()

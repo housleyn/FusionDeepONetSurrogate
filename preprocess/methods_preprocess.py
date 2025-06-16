@@ -5,7 +5,7 @@ from sklearn.neighbors import NearestNeighbors
 
 class MethodsPreprocess:
     def load_and_pad(self):
-        for radius, path in self.radius_files.items():
+        for path in self.files:
             df = pd.read_csv(path)
             coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
             outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
@@ -16,10 +16,10 @@ class MethodsPreprocess:
                 coords = coords_full
                 outputs = outputs_full
             
-            radius_vec = np.full((coords.shape[0], 1), radius)
+            param_vec = df[["a", "b"]].to_numpy()
 
             self.coords.append(coords)
-            self.radii.append(radius_vec)
+            self.radii.append(param_vec)
             self.outputs.append(outputs)
 
         self.npts_max = max(c.shape[0] for c in self.coords)
@@ -92,7 +92,7 @@ class MethodsPreprocess:
     def to_numpy(self):
         X_coords = np.stack(self.coords)
         Y_outputs = np.stack(self.outputs)
-        G_params = np.stack(self.radii)[:, 0, :]  # extract 1 value per sample
+        G_params = np.stack(self.radii)[:, 0, :]
         return X_coords, Y_outputs, G_params
 
     def save(self):
@@ -101,7 +101,7 @@ class MethodsPreprocess:
             self.output_path,
             coords=X_coords,           # shape: (num_samples, npts_max, 3)
             outputs=Y_outputs,         # shape: (num_samples, npts_max, output_dim)
-            params=G_params,           # shape: (num_samples, 1)
+            params=G_params,           # shape: (num_samples, 2)
             coords_mean=self.coords_mean,     # shape: (3,)
             coords_std=self.coords_std,       # shape: (3,)
             outputs_mean=self.outputs_mean,   # shape: (output_dim,)
