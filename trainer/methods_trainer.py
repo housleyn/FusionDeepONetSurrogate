@@ -1,27 +1,11 @@
-import torch 
+import torch
+import os
+
 class MethodsTrainer:
     def train(self, train_loader, test_loader, num_epochs, print_every):
-        
         loss_history, test_loss_history = [], []
-        # for coords, params, targets in train_loader:
-        #     # Print shapes
-        #     print("coords shape:", coords.shape)
-        #     print("params shape:", params.shape)
-        #     print("targets shape:", targets.shape)
-
-        #     # Print column headings and first row for coords
-        #     print("coords columns: ['X', 'Y', 'Z'] (example)")
-        #     print("coords first row:", coords[0, 0].cpu().numpy())
-
-        #     # Print column headings and first row for params
-        #     print("params columns: ['radius'] (example)")
-        #     print("params first row:", params[0].cpu().numpy())
-
-        #     # Print column headings and first row for targets
-        #     print("targets columns: ['u', 'v', 'w', 'rho', 'p'] (example)")
-        #     print("targets first row:", targets[0, 0].cpu().numpy())
-
-        #     break  # Remove this break if you want to print for every batch
+        best_loss = float('inf')
+        os.makedirs('checkpoints', exist_ok=True)
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
@@ -43,8 +27,7 @@ class MethodsTrainer:
                 epoch_loss += loss.item() * batch_size
                 total_samples += batch_size
 
-
-            # self.lr_scheduler.step()
+            self.lr_scheduler.step()
             avg_loss = epoch_loss / total_samples
             loss_history.append(avg_loss)
 
@@ -52,12 +35,23 @@ class MethodsTrainer:
             test_loss = self.evaluate(test_loader)
             test_loss_history.append(test_loss)
 
+            # Checkpoint: Save best model
+            if test_loss < best_loss:
+                best_loss = test_loss
+                checkpoint = {
+                    'epoch': epoch,
+                    'model_state_dict': self.model.state_dict(),
+                    'optimizer_state_dict': self.optimizer.state_dict(),
+                    'scheduler_state_dict': self.lr_scheduler.state_dict(),
+                    'loss': test_loss
+                }
+                torch.save(checkpoint, 'checkpoints/best_model.pt')
+
             if epoch % print_every == 0 or epoch == num_epochs - 1:
                 print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e}")
 
         return loss_history, test_loss_history
 
-    
     def evaluate(self, dataloader):
         self.model.eval()
         total_loss = 0.0
@@ -74,9 +68,7 @@ class MethodsTrainer:
                 total_loss += loss.item() * batch_size
                 total_samples += batch_size
 
-        avg_loss = total_loss / total_samples
-        return avg_loss
-
+        return total_loss / total_samples
 
     def save_model(self, path="fusion_deeponet.pt"):
         torch.save(self.model.state_dict(), path)
@@ -84,3 +76,12 @@ class MethodsTrainer:
     def load_model(self, path):
         self.model.load_state_dict(torch.load(path))
         self.model.eval()
+
+    def load_checkpoint(self, path="checkpoints/best_model.pt"):
+        checkpoint = torch.load(path)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.lr_scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        start_epoch = checkpoint['epoch'] + 1
+        print(f"✅ Loaded checkpoint from epoch {checkpoint['epoch']}")
+        return start_epoch

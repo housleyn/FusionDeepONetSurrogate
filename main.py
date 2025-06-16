@@ -16,17 +16,17 @@ from vanilla_model import VanillaDeepONet
 def main():
     # === Configuration ===
     npz_path = "processed_data.npz"
-    batch_size = 1
-    num_epochs = 50000
+    batch_size = 28
+    num_epochs = 5
     output_dim = 5  # u,v,w,rho, and p (not in that order)
     device = "cuda" if torch.cuda.is_available() else "cpu" 
 
     # === Load Data ===
     data = Data(npz_path)
-    train_loader, test_loader = data.get_dataloader(batch_size, shuffle=False, test_size=.25)
+    train_loader, test_loader = data.get_dataloader(batch_size, shuffle=False, test_size=.2)
 
     # === Create Model ===
-    model = VanillaDeepONet(
+    model = FusionDeepONet(
         coord_dim=3,
         param_dim=2,
         hidden_size=32,
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     plt.semilogy(loss_history, label='Training Loss')
     plt.semilogy(test_loss_history, label='Testing Loss')
     plt.xlabel("Epoch")
-    plt.ylabel("Loss (log scale)")
+    plt.ylabel("Loss")
     plt.title("Training and Testing Loss History")
     plt.legend()
     plt.grid(True)

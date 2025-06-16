@@ -12,7 +12,7 @@ class MethodsDataloader:
 
 
 
-    def get_dataloader(self, batch_size, shuffle=True, test_size=.25):
+    def get_dataloader(self, batch_size, shuffle=True, test_size=.2):
         coords = self.coords
         outputs = self.outputs
         params = self.params
