@@ -97,44 +97,44 @@ def csv_to_vtk(csv_path, vtk_path):
     cloud.save(vtk_path)
 
 if __name__ == "__main__":
-    preprocess = Preprocess(param_files=ellipse_file_list(),dimension=2, output_path="processed_data.npz")
-    preprocess.run_all()
-    print("began training")
-    loss_history, test_loss_history = main()
+    # preprocess = Preprocess(param_files=ellipse_file_list(),dimension=2, output_path="processed_data.npz")
+    # preprocess.run_all()
+    # print("began training")
+    # loss_history, test_loss_history = main()
 
-    plt.semilogy(loss_history, label='Training Loss')
-    plt.semilogy(test_loss_history, label='Testing Loss')
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training and Testing Loss History")
-    plt.legend()
-    plt.grid(True)
-    os.makedirs("figures", exist_ok=True)
-    plt.savefig("figures/loss_history.png")
-    plt.show()
+    # plt.semilogy(loss_history, label='Training Loss')
+    # plt.semilogy(test_loss_history, label='Testing Loss')
+    # plt.xlabel("Epoch")
+    # plt.ylabel("Loss")
+    # plt.title("Training and Testing Loss History")
+    # plt.legend()
+    # plt.grid(True)
+    # os.makedirs("figures", exist_ok=True)
+    # plt.savefig("figures/loss_history.png")
+    # plt.show()
 
 
-    # # Load model and stats
-    # file_to_load = "2D_data/2Dsphere_data_095.csv"
-    # file_to_make = "2D_data/2Dsphere_data_095.vtk"
-    # device = "cpu"
-    # from inference import Inference
-    # inference = Inference(model_path="fusion_deeponet.pt", stats_path="processed_data.npz", device=device)
+    # Load model and stats
+    file_to_load = "ellipse_data/ellipse_data_test1.csv"
+    file_to_make = "ellipse_data/ellipse_data_test1.vtk"
+    device = "cpu"
+    from inference import Inference
+    inference = Inference(model_path="fusion_deeponet.pt", stats_path="processed_data.npz", device=device)
 
-    # # Prepare input
-    # coords_np, radius_val = inference.load_csv_input(file_to_load)
+    # Prepare input
+    coords_np, a,b = inference.load_csv_input(file_to_load)
+    params = (a,b)
+    # Predict
+    output = inference.predict(coords_np, params)
 
-    # # Predict
-    # output = inference.predict(coords_np, radius_val)
+    # output shape = (n_pts, 5)
 
-    # # output shape = (n_pts, 5)
+    # Save to CSV
+    inference.save_to_csv(coords_np, output, params, out_path="predicted_test1.csv")
 
-    # # Save to CSV
-    # inference.save_to_csv(coords_np, output, radius_val, out_path="predicted_output.csv")
-
-    # # Save to VTK for visualization
-    # inference.save_to_vtk(coords_np, output, out_path="predicted_output.vtk")
-    # csv_to_vtk(file_to_load, file_to_make)
+    # Save to VTK for visualization
+    inference.save_to_vtk(coords_np, output, out_path="predicted_test1.vtk")
+    csv_to_vtk(file_to_load, file_to_make)
 
     
     # mesh = pv.read("predicted_output.vtk")

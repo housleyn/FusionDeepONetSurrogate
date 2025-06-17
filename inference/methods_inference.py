@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 class MethodsInference:
     def _load_model(self, path):
-        model = FusionDeepONet(coord_dim=3, param_dim=1, hidden_size=32, num_hidden_layers=3, out_dim=5)
+        model = FusionDeepONet(coord_dim=3, param_dim=2, hidden_size=32, num_hidden_layers=3, out_dim=5)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
@@ -30,16 +30,20 @@ class MethodsInference:
         return coords, radius
 
     def _denormalize(self, output):
+        print("Output shape:", output.shape)
+        print("Output mean shape:", self.stats["outputs_mean"].shape)
+        print("Output std shape:", self.stats["outputs_std"].shape)
         return output * self.stats["outputs_std"] + self.stats["outputs_mean"]
 
-    def predict(self, coords_np, radius_val):
+    def predict(self, coords_np, params):
         coords = torch.tensor(coords_np, dtype=torch.float32).unsqueeze(0).to(self.device)
-        radius = torch.tensor([[radius_val]], dtype=torch.float32).to(self.device)
+        params = torch.tensor([params], dtype=torch.float32).to(self.device)
+        
 
-        coords_norm, radius_norm = self._normalize(coords, radius)
+       
         with torch.no_grad():
-            pred_norm = self.model(coords_norm, radius_norm)
-        pred = self._denormalize(pred_norm)
+            pred = self.model(coords, params)
+        pred = self._denormalize(pred)
         return pred.squeeze(0).cpu().numpy()
 
     def load_csv_input(self, csv_path):
@@ -49,6 +53,11 @@ class MethodsInference:
             radius_val = np.float32(df["Sphere Radius"].iloc[0])
         elif "sphere_radius" in df.columns:
             radius_val = np.float32(df["sphere_radius"].iloc[0])
+        elif "a" in df.columns:
+            a = np.float32(df["a"].iloc[0])
+            b = np.float32(df["b"].iloc[0])
+            return coords_np, a, b
+        
         else:
             raise ValueError("CSV must contain a 'Sphere Radius' column.")
         return coords_np, radius_val
@@ -62,10 +71,11 @@ class MethodsInference:
             writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(headers)
             for i in range(coords_np.shape[0]):
-                vel = output_np[i, :3]
-                pressure = output_np[i, 3]
-                density = output_np[i, 4]
-                row = list(vel) + [pressure, density, radius_val] + list(coords_np[i])
+                density = output_np[i, 0]
+                vel = output_np[i, 1:4]
+                pressure = output_np[i, 4]
+
+                row = [density] + list(vel) + [pressure, radius_val] + list(coords_np[i])
                 writer.writerow(row)
 
     def save_to_vtk(self, coords_np, output_np, out_path="predicted_output.vtk"):
