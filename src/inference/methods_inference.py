@@ -1,10 +1,11 @@
 import torch
-from model import FusionDeepONet
+from ..model import FusionDeepONet
 import csv
 import numpy as np 
 import pandas as pd
 import pyvista as pv
 import matplotlib.pyplot as plt
+import os
 
 class MethodsInference:
     def _load_model(self, path):
@@ -62,6 +63,9 @@ class MethodsInference:
             'Density (kg/m^3)', 'Velocity[i] (m/s)', 'Velocity[j] (m/s)', 'Velocity[k] (m/s)',
             'Absolute Pressure (Pa)', "Sphere Radius", "X (m)", "Y (m)", "Z (m)"
         ]
+        results_dir = os.path.join("Tables_and_Figures", "tables")
+        os.makedirs(results_dir, exist_ok=True)
+        out_path = os.path.join(results_dir, out_path)
         with open(out_path, mode='w', newline='') as f:
             writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(headers)
@@ -78,6 +82,9 @@ class MethodsInference:
         cloud["velocity"] = output_np[:, 1:4]
         cloud["pressure"] = output_np[:, 4]
         cloud["density"] = output_np[:, 0]
+        vtk_dir = os.path.join("Tables_and_Figures", "figures")
+        os.makedirs(vtk_dir, exist_ok=True)
+        out_path = os.path.join(vtk_dir, out_path)
         cloud.save(out_path)
         print(f"✅ VTK file saved to: {out_path}")
 
@@ -111,5 +118,7 @@ class MethodsInference:
         table.set_fontsize(12)
         table.scale(1.2, 1.2)
         plt.tight_layout()
-        plt.savefig("rmse_table.png", dpi=300)
+        tables_dir = os.path.join("Tables_and_Figures", "tables")
+        os.makedirs(tables_dir, exist_ok=True)
+        plt.savefig(os.path.join(tables_dir, "rmse_table.png"), dpi=300)
         plt.show()

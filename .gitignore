@@ -56,3 +56,4 @@ pytestdebug.log  # pytest debug log
 # Windows
 Thumbs.db
 ehthumbs.db
+checkpoints/

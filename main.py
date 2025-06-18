@@ -109,8 +109,9 @@ if __name__ == "__main__":
     # plt.title("Training and Testing Loss History")
     # plt.legend()
     # plt.grid(True)
-    # os.makedirs("figures", exist_ok=True)
-    # plt.savefig("figures/loss_history.png")
+    # fig_dir = os.path.join("Tables_and_Figures", "figures")
+    # os.makedirs(fig_dir, exist_ok=True)
+    # plt.savefig(os.path.join(fig_dir, "loss_history.png"))
     # plt.show()
 
 
