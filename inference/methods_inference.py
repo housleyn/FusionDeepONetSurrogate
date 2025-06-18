@@ -24,11 +24,6 @@ class MethodsInference:
             "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
         }
 
-    def _normalize(self, coords, radius):
-        # Coordinates and radius were not normalized during training,
-        # so simply return them unchanged
-        return coords, radius
-
     def _denormalize(self, output):
         print("Output shape:", output.shape)
         print("Output mean shape:", self.stats["outputs_mean"].shape)

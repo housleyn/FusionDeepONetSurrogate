@@ -25,47 +25,33 @@ class MethodsPreprocess:
             self.outputs.append(outputs)
 
         self.npts_max = max(c.shape[0] for c in self.coords)
+        if self.dimension ==2:
+            
+            padded_coords = []
+            padded_params = []
+            padded_outputs = []
+            for c, r, o in zip(self.coords, self.params, self.outputs):
+                c_pad = self._pad(c)
+                r_pad = self._pad(r)
+                o_pad = self._pad(o)
+                padded_coords.append(c_pad)
+                padded_params.append(r_pad)
+                padded_outputs.append(o_pad)
 
-        # pad all arrays to the maximum number of points
-        padded_coords = []
-        padded_params = []
-        padded_outputs = []
-        for c, r, o in zip(self.coords, self.params, self.outputs):
-            c_pad = self._pad(c)
-            r_pad = self._pad(r)
-            o_pad = self._pad(o)
-            padded_coords.append(c_pad)
-            padded_params.append(r_pad)
-            padded_outputs.append(o_pad)
-
-        self.coords = padded_coords
-        self.params = padded_params
-        self.outputs = padded_outputs
-
-        # Compute statistics without normalizing coordinates or radii
-        coords_flat = np.vstack(self.coords)
+            self.coords = padded_coords
+            self.params = padded_params
+            self.outputs = padded_outputs
+        
         outputs_flat = np.vstack(self.outputs)
-        params_flat = np.vstack(self.params)
-
-        # store stats for reference but only normalize flow variables
-        self.coords_mean = np.mean(coords_flat, axis=0)
-        self.coords_std = np.std(coords_flat, axis=0)
-        self.coords_std[self.coords_std == 0] = 1
-
-        self.params_mean = np.mean(params_flat, axis=0)
-        self.params_std = np.std(params_flat, axis=0)
-        self.params_std[self.params_std == 0] = 1
-
         outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
 
-        # replace outputs with normalized values
         idx = 0
         for i in range(len(self.outputs)):
             n = self.outputs[i].shape[0]
             self.outputs[i] = outputs_flat[idx:idx+n]
             idx += n
 
-    def LHS(self, coords_full, outputs_full): # Latin Hypercube Sampling, 500,000 samples per simulation
+    def LHS(self, coords_full, outputs_full): 
         N_sample = 500000
         coords_min = coords_full.min(axis=0)
         coords_max = coords_full.max(axis=0)
@@ -75,12 +61,10 @@ class MethodsPreprocess:
         sampler = qmc.LatinHypercube(d=3)
         lhs = sampler.random(n=N_sample)
 
-        # Nearest neighbor mapping
         nn = NearestNeighbors(n_neighbors=1, algorithm="auto").fit(coords_norm)
         _, indices = nn.kneighbors(lhs)
         indices = indices[:, 0]
 
-        # Select matched points
         coords = coords_full[indices]
         outputs = outputs_full[indices]
         return coords, outputs
@@ -104,12 +88,8 @@ class MethodsPreprocess:
             coords=X_coords,           # shape: (num_samples, npts_max, 3)
             outputs=Y_outputs,         # shape: (num_samples, npts_max, output_dim)
             params=G_params,           # shape: (num_samples, 2)
-            coords_mean=self.coords_mean,     # shape: (3,)
-            coords_std=self.coords_std,       # shape: (3,)
             outputs_mean=self.outputs_mean,   # shape: (output_dim,)
             outputs_std=self.outputs_std,     # shape: (output_dim,)
-            params_mean=self.params_mean,       # shape: (1,)
-            params_std=self.params_std          # shape: (1,)
         )
 
     def run_all(self):

@@ -24,7 +24,7 @@ def preprocess_instance2D():
     return object
 @pytest.fixture
 def preprocess_instance3D():
-    object = Preprocess(files=sphere_file_list(), dimension=3, output_path="unittest_output.npz", param_columns=["radius"])
+    object = Preprocess(files=sphere_file_list(), dimension=3, output_path="unittest_output.npz", param_columns=["Sphere Radius"])
     return object
 
 
@@ -60,3 +60,17 @@ def test_preprocess_load_and_pad_2D(preprocess_instance2D):
     assert len(preprocess_instance2D.outputs) > 0
     assert preprocess_instance2D.npts_max > 0
     assert preprocess_instance2D.lhs_applied is False
+    assert preprocess_instance2D.outputs_mean is not None
+    assert preprocess_instance2D.outputs_std is not None
+
+def test_preprocess_load_and_pad_3D(preprocess_instance3D):
+    preprocess_instance3D.load_and_pad()
+    
+    assert len(preprocess_instance3D.coords) > 0
+    assert len(preprocess_instance3D.params) > 0
+    assert len(preprocess_instance3D.outputs) > 0
+    assert preprocess_instance3D.npts_max > 0
+    assert preprocess_instance3D.lhs_applied is True
+    assert preprocess_instance3D.outputs_mean is not None
+    assert preprocess_instance3D.outputs_std is not None
+
