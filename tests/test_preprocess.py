@@ -6,33 +6,42 @@ import glob
 import os
 
 
-from preprocess import Preprocess
-import preprocess.methods_preprocess as mp
+from src.preprocess import Preprocess
+import src.preprocess.methods_preprocess as mp
 
-def ellipse_file_list():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..","ellipse_data"))
-    file_paths = sorted(glob.glob(os.path.join(base_dir, "*.csv")))
-    return file_paths
-def sphere_file_list():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..","sphere_data"))
-    file_paths = sorted(glob.glob(os.path.join(base_dir, "*.csv")))
-    return file_paths
+def create_dummy_csv(tmp_dir, dim=2):
+    cols = ["X (m)", "Y (m)", "Z (m)",
+            "Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
+            "Absolute Pressure (Pa)"]
+    data = np.random.rand(10, len(cols))
+    df = pd.DataFrame(data, columns=cols)
+    if dim == 2:
+        df["a"] = 1.0
+        df["b"] = 2.0
+    else:
+        df["Sphere Radius"] = 0.5
+    path = os.path.join(tmp_dir, f"dummy_{dim}d.csv")
+    df.to_csv(path, index=False)
+    return [path]
 
 @pytest.fixture
-def preprocess_instance2D():
-    object = Preprocess(files=ellipse_file_list(), dimension=2, output_path="unittest_output.npz", param_columns=["a", "b"])
-    return object
+def preprocess_instance2D(tmp_path):
+    files = create_dummy_csv(tmp_path, dim=2)
+    obj = Preprocess(files=files, dimension=2, output_path=str(tmp_path / "unittest_output.npz"), param_columns=["a", "b"])
+    return obj
+
 @pytest.fixture
-def preprocess_instance3D():
-    object = Preprocess(files=sphere_file_list(), dimension=3, output_path="unittest_output.npz", param_columns=["Sphere Radius"])
-    return object
+def preprocess_instance3D(tmp_path):
+    files = create_dummy_csv(tmp_path, dim=3)
+    obj = Preprocess(files=files, dimension=3, output_path=str(tmp_path / "unittest_output.npz"), param_columns=["Sphere Radius"])
+    return obj
 
 
 def test_preprocess_init_2D(preprocess_instance2D):
     assert isinstance(preprocess_instance2D, Preprocess)
     assert preprocess_instance2D.dimension == 2
     assert len(preprocess_instance2D.files) > 0
-    assert preprocess_instance2D.output_path == "unittest_output.npz"
+    assert preprocess_instance2D.output_path.endswith("unittest_output.npz")
     assert preprocess_instance2D.param_columns == ["a", "b"]
     assert len(preprocess_instance2D.coords) == 0
     assert len(preprocess_instance2D.params) == 0
@@ -44,7 +53,7 @@ def test_preprocess_init_3D(preprocess_instance3D):
     assert isinstance(preprocess_instance3D, Preprocess)
     assert preprocess_instance3D.dimension == 3
     assert len(preprocess_instance3D.files) > 0
-    assert preprocess_instance3D.output_path == "unittest_output.npz"
+    assert preprocess_instance3D.output_path.endswith("unittest_output.npz")
     assert preprocess_instance3D.param_columns == ["Sphere Radius"]
     assert len(preprocess_instance3D.coords) == 0
     assert len(preprocess_instance3D.params) == 0

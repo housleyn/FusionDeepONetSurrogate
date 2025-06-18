@@ -2,7 +2,7 @@ import pytest
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from vanilla_model import VanillaDeepONet
+from src.vanilla_model import VanillaDeepONet
 import torch
 
 @pytest.fixture

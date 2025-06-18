@@ -2,8 +2,8 @@ import torch
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from trainer import Trainer
-from model import FusionDeepONet
+from src.trainer import Trainer
+from src.model import FusionDeepONet
 
 
 def create_loaders():

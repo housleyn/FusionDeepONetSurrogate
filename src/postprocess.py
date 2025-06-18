@@ -17,7 +17,9 @@ error["Y (m)"] = df_true["Y (m)"]
 # error.to_csv("error_test1.csv", index=False)
 
 # Output folder
-os.makedirs("figures", exist_ok=True)
+figures_dir = os.path.join("Tables_and_Figures", "figures")
+tables_dir = os.path.join("Tables_and_Figures", "tables")
+os.makedirs(figures_dir, exist_ok=True)
 
 # Fields to compare
 fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)",
@@ -46,8 +48,8 @@ table.set_fontsize(12)
 table.scale(1, 2)
 
 # Save
-os.makedirs("tables", exist_ok=True)
-plt.savefig("tables/relative_l2_errors.png", bbox_inches='tight')
+os.makedirs(tables_dir, exist_ok=True)
+plt.savefig(os.path.join(tables_dir, "relative_l2_errors.png"), bbox_inches='tight')
 plt.close()
 
 # Create interpolation and plotting per field
@@ -121,5 +123,7 @@ for field in fields:
                   .replace('(','')\
                   .replace(')','')\
                   .replace('/','_')
-    plt.savefig(f"error_figures/{safe_field}_comparison.png")
+    error_dir = os.path.join(figures_dir, "error_figures")
+    os.makedirs(error_dir, exist_ok=True)
+    plt.savefig(os.path.join(error_dir, f"{safe_field}_comparison.png"))
     plt.close()

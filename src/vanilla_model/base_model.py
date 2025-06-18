@@ -1,6 +1,6 @@
 import torch.nn as nn
-from model.MLP import MLP
-from model.activations import RowdyActivation
+from ..model.MLP import MLP
+from ..model.activations import RowdyActivation
 
 class BaseModel(nn.Module):
     def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim):
