@@ -1,23 +1,13 @@
 class BasePreprocess:
-    def __init__(self, param_files, dimension, output_path="processed_data.npz"):
-        """Initialize the preprocessing object.
+    def __init__(self, files, dimension, output_path, param_columns):
 
-        Parameters
-        ----------
-        radius_files : dict
-            Mapping from radius value to CSV file path.
-        dimension : int
-            Dimensionality of the data (2 or 3).
-        output_path : str, optional
-            Where the processed ``npz`` file will be written.
-        """
 
-        self.files = param_files
+        self.files = files
         self.output_path = output_path
-        
+        self.param_columns = param_columns
         self.coords = []
-        self.radii = []
+        self.params = []
         self.outputs = []
-        self.npts_max = 0  # max elements determined based on data
+        self.npts_max = 0  
         self.dimension = dimension
         self.lhs_applied = False

@@ -5,7 +5,7 @@ from sklearn.neighbors import NearestNeighbors
 
 class MethodsPreprocess:
     def load_and_pad(self):
-        # ``self.files`` is a mapping from radius value to CSV file path
+        
         for path in self.files:
             df = pd.read_csv(path)
             coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
@@ -17,44 +17,44 @@ class MethodsPreprocess:
                 coords = coords_full
                 outputs = outputs_full
 
-            # For the vanilla sphere data we only keep the radius as parameter
-            param_vec = df[["a", "b"]].to_numpy()
+            
+            param_vec = df[self.param_columns].to_numpy()
 
             self.coords.append(coords)
-            self.radii.append(param_vec)
+            self.params.append(param_vec)
             self.outputs.append(outputs)
 
         self.npts_max = max(c.shape[0] for c in self.coords)
 
         # pad all arrays to the maximum number of points
         padded_coords = []
-        padded_radii = []
+        padded_params = []
         padded_outputs = []
-        for c, r, o in zip(self.coords, self.radii, self.outputs):
+        for c, r, o in zip(self.coords, self.params, self.outputs):
             c_pad = self._pad(c)
             r_pad = self._pad(r)
             o_pad = self._pad(o)
             padded_coords.append(c_pad)
-            padded_radii.append(r_pad)
+            padded_params.append(r_pad)
             padded_outputs.append(o_pad)
 
         self.coords = padded_coords
-        self.radii = padded_radii
+        self.params = padded_params
         self.outputs = padded_outputs
 
         # Compute statistics without normalizing coordinates or radii
         coords_flat = np.vstack(self.coords)
         outputs_flat = np.vstack(self.outputs)
-        radii_flat = np.vstack(self.radii)
+        params_flat = np.vstack(self.params)
 
         # store stats for reference but only normalize flow variables
         self.coords_mean = np.mean(coords_flat, axis=0)
         self.coords_std = np.std(coords_flat, axis=0)
         self.coords_std[self.coords_std == 0] = 1
 
-        self.radii_mean = np.mean(radii_flat, axis=0)
-        self.radii_std = np.std(radii_flat, axis=0)
-        self.radii_std[self.radii_std == 0] = 1
+        self.params_mean = np.mean(params_flat, axis=0)
+        self.params_std = np.std(params_flat, axis=0)
+        self.params_std[self.params_std == 0] = 1
 
         outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
 
@@ -94,7 +94,7 @@ class MethodsPreprocess:
     def to_numpy(self):
         X_coords = np.stack(self.coords)
         Y_outputs = np.stack(self.outputs)
-        G_params = np.stack(self.radii)[:, 0, :]
+        G_params = np.stack(self.params)[:, 0, :]
         return X_coords, Y_outputs, G_params
 
     def save(self):
@@ -108,8 +108,8 @@ class MethodsPreprocess:
             coords_std=self.coords_std,       # shape: (3,)
             outputs_mean=self.outputs_mean,   # shape: (output_dim,)
             outputs_std=self.outputs_std,     # shape: (output_dim,)
-            radii_mean=self.radii_mean,       # shape: (1,)
-            radii_std=self.radii_std          # shape: (1,)
+            params_mean=self.params_mean,       # shape: (1,)
+            params_std=self.params_std          # shape: (1,)
         )
 
     def run_all(self):
@@ -119,5 +119,5 @@ class MethodsPreprocess:
     def _normalize(self, data):
         mean = np.mean(data, axis=0)
         std = np.std(data, axis=0)
-        std[std == 0] = 1  # avoid division by zero
+        std[std == 0] = 1  
         return (data - mean) / std, mean, std
