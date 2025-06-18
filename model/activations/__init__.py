@@ -3,4 +3,4 @@ from .methods_activations import MethodsRowdyActivation
 
 class RowdyActivation(BaseRowdyActivation, MethodsRowdyActivation):
     def forward(self,x):
-        return  self.base_fn(x) #* self.alpha
+        return  self.base_fn(x) * self.alpha
