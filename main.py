@@ -69,7 +69,7 @@ def radius_file_dict():
         }
 
 def ellipse_file_list():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "ellipse_data"))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "Data","ellipse_data"))
     file_paths = sorted(glob.glob(os.path.join(base_dir, "*.csv")))
     return file_paths
 

@@ -25,6 +25,7 @@ class MethodsPreprocess:
             self.outputs.append(outputs)
 
         self.npts_max = max(c.shape[0] for c in self.coords)
+        
         if self.dimension ==2:
             
             padded_coords = []
