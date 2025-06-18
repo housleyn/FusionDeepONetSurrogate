@@ -45,7 +45,7 @@ def test_preprocess_init_3D(preprocess_instance3D):
     assert preprocess_instance3D.dimension == 3
     assert len(preprocess_instance3D.files) > 0
     assert preprocess_instance3D.output_path == "unittest_output.npz"
-    assert preprocess_instance3D.param_columns == ["radius"]
+    assert preprocess_instance3D.param_columns == ["Sphere Radius"]
     assert len(preprocess_instance3D.coords) == 0
     assert len(preprocess_instance3D.params) == 0
     assert len(preprocess_instance3D.outputs) == 0

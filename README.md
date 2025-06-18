@@ -18,3 +18,6 @@ etc.
 your parameters must also be specified in your SurrogateParameters.txt so the surrogate model knows which columns are paramters. They must be passed in as a list:
 
 ["param1","param2"]
+
+
+(will need to do something about lhs sample size)

@@ -1,21 +1,21 @@
 import torch
-from model import FusionDeepONet
-from dataloader import Data
-from trainer import Trainer
+from src.model import FusionDeepONet
+from src.dataloader import Data
+from src.trainer import Trainer
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib import colormaps
-from preprocess import Preprocess
+from src.preprocess import Preprocess
 import os
-from inference import Inference
+from src.inference import Inference
 import pyvista as pv
 import pandas as pd
 import glob
-from vanilla_model import VanillaDeepONet
+from src.vanilla_model import VanillaDeepONet
 
 def main():
     # === Configuration ===
-    npz_path = "processed_data.npz"
+    npz_path = "Data/processed_data.npz"
     batch_size = 1
     num_epochs = 1
     output_dim = 5  # u,v,w,rho, and p (not in that order)
