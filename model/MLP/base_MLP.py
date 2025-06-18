@@ -15,3 +15,4 @@ class BaseMLP(nn.Module):
             self.layers.append(nn.Linear(hidden_features, hidden_features))
             self.activations.append(RowdyActivation(hidden_features))
         self.final = nn.Linear(hidden_features, out_features)
+

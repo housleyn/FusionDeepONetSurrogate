@@ -6,9 +6,17 @@ import os
 
 # Load and clean data
 df_true = pd.read_csv("ellipse_data/ellipse_data_test1.csv").drop(columns=["a", "b"])
-df_pred = pd.read_csv("predicted_test1.csv").drop(columns=["Sphere Radius"])
-df_pred = df_pred[["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
-                   "Absolute Pressure (Pa)", "Density (kg/m^3)", "X (m)", "Y (m)", "Z (m)"]]
+df_pred = pd.read_csv("predicted_test1.csv").drop(columns=["a", "b"], errors="ignore")
+df_pred = df_pred[[
+    "Velocity[i] (m/s)",
+    "Velocity[j] (m/s)",
+    "Velocity[k] (m/s)",
+    "Absolute Pressure (Pa)",
+    "Density (kg/m^3)",
+    "X (m)",
+    "Y (m)",
+    "Z (m)",
+]]
 
 # Calculate error
 error = np.abs(df_true - df_pred)
@@ -59,3 +67,4 @@ for field in fields:
                   .replace('/','_')
     plt.savefig(f"error_figures/{safe_field}_comparison.png")
     plt.close()
+

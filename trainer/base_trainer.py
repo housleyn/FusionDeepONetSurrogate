@@ -10,3 +10,4 @@ class BaseTrainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.75)
 
+
