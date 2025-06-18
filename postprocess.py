@@ -5,8 +5,8 @@ from scipy.interpolate import griddata
 import os
 
 # Load and clean data
-df_true = pd.read_csv("ellipse_data/ellipse_data_test3.csv").drop(columns=["a", "b"])
-df_pred = pd.read_csv("predicted_test3.csv").drop(columns=["Sphere Radius"])
+df_true = pd.read_csv("ellipse_data/ellipse_data_unseen2.csv").drop(columns=["a", "b"])
+df_pred = pd.read_csv("predicted_unseen2.csv").drop(columns=["Sphere Radius"])
 df_pred = df_pred[["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
                    "Absolute Pressure (Pa)", "Density (kg/m^3)", "X (m)", "Y (m)", "Z (m)"]]
 
@@ -14,17 +14,41 @@ df_pred = df_pred[["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)"
 error = (df_true - df_pred)
 error["X (m)"] = df_true["X (m)"]
 error["Y (m)"] = df_true["Y (m)"]
-error.to_csv("error_test1.csv", index=False)
+# error.to_csv("error_test1.csv", index=False)
 
 # Output folder
 os.makedirs("figures", exist_ok=True)
 
 # Fields to compare
-fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
+fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)",
           "Absolute Pressure (Pa)", "Density (kg/m^3)"]
 
 
+# Calculate relative L2 errors
+errors = {}
+for field in fields:
+    u_true = df_true[field].values
+    u_pred = df_pred[field].values
+    rel_l2 = 100 * np.linalg.norm(u_pred - u_true) / np.linalg.norm(u_true)
+    errors[field] = rel_l2
 
+# Create table as PNG
+fig, ax = plt.subplots(figsize=(10, 2))
+ax.axis('off')
+table_data = [(k, f"{v:.2f}%") for k, v in errors.items()]
+
+table = ax.table(cellText=table_data,
+                 colLabels=["Field", "Relative L2 Norm % Error"],
+                 cellLoc='center',
+                 loc='center')
+table.auto_set_font_size(False)
+table.set_fontsize(12)
+table.scale(1, 2)
+
+# Save
+os.makedirs("tables", exist_ok=True)
+plt.savefig("tables/relative_l2_errors.png", bbox_inches='tight')
+plt.close()
 
 # Create interpolation and plotting per field
 for field in fields:
