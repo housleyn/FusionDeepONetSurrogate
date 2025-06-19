@@ -1,4 +1,5 @@
 import torch
+import os
 class BaseSurrogate:
     def __init__(self, files=None):
 
@@ -20,5 +21,9 @@ class BaseSurrogate:
         self.files = files
         self.loss_history_file_name = "loss_history_test.png"
         self.model_path = "src/model/fusion_deeponet.pt"
-        self.predicted_output_file = "predicted_output.csv"
+        # Save predictions inside the inference module so other modules can
+        # reliably find the output regardless of the current working directory.
+        self.predicted_output_file = os.path.join(
+            os.path.dirname(__file__), "..", "inference", "predicted_output.csv"
+        )
         self.true_data = "Data/ellipse_data/ellipse_data_unseen2.csv"
