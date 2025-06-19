@@ -24,7 +24,7 @@ class MethodsInference:
 
     def predict(self, coords_np, params):
         coords = torch.tensor(coords_np, dtype=torch.float32).unsqueeze(0).to(self.device)
-        params = torch.tensor(params, dtype=torch.float32).to(self.device)
+        params = torch.tensor(params, dtype=torch.float32).unsqueeze(0).to(self.device)
                
         with torch.no_grad():
             pred = self.model(coords, params)
