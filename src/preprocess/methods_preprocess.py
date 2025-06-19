@@ -53,7 +53,7 @@ class MethodsPreprocess:
             idx += n
 
     def LHS(self, coords_full, outputs_full): 
-        N_sample = 500000
+        N_sample = self.lhs_sample
         coords_min = coords_full.min(axis=0)
         coords_max = coords_full.max(axis=0)
         coords_norm = (coords_full - coords_min) / (coords_max - coords_min)

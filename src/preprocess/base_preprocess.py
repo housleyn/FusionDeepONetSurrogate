@@ -1,5 +1,5 @@
 class BasePreprocess:
-    def __init__(self, files, dimension, output_path, param_columns):
+    def __init__(self, files, dimension, output_path, param_columns, lhs_sample):
 
 
         self.files = files
@@ -11,3 +11,4 @@ class BasePreprocess:
         self.npts_max = 0  
         self.dimension = dimension
         self.lhs_applied = False
+        self.lhs_sample = lhs_sample

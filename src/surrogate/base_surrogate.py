@@ -27,3 +27,4 @@ class BaseSurrogate:
             os.path.dirname(__file__), "..", "inference", "predicted_output.csv"
         )
         self.true_data = "Data/ellipse_data/ellipse_data_unseen2.csv"
+        self.lhs_sample = 500000

@@ -17,7 +17,7 @@ class MethodsSurrogate:
         
     
     def _preprocess_data(self):
-        preprocess = Preprocess(files=self.files ,dimension=self.dimension, output_path=self.output_path, param_columns=self.param_columns)
+        preprocess = Preprocess(files=self.files ,dimension=self.dimension, output_path=self.output_path, param_columns=self.param_columns, lhs_sample=self.lhs_sample)
         preprocess.run_all()
         print("Data preprocessing complete.")
 
