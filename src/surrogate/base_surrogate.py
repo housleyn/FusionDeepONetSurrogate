@@ -1,34 +1,36 @@
 import torch
 import os
+import yaml
 class BaseSurrogate:
-    def __init__(self):
-
-        self.project_name = "semi_ellipse1"
-        self.data_folder = "Data/ellipse_data"
-        self.files = self._get_data_files()
-        self.npz_path = "Data/processed_data.npz"
-        self.batch_size = 1
-        self.num_epochs = 10
-        self.output_dim = 5  # u,v,w,rho, and p (not in that order)
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.test_size = 0.2
-        self.coord_dim = 3
-        self.param_dim = 2
-        self.hidden_size = 32
-        self.num_hidden_layers = 3
-        self.print_every = 1
-        self.shuffle = False
-        self.dimension = 2  # 2D or 3D problem
-        self.output_path = "Data/processed_data.npz"
-        self.param_columns = ["a", "b"]
+    def __init__(self, config_path):
         
-        self.loss_history_file_name = "loss_history_test.png"
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+        self.project_name = config["project_name"]
+        self.data_folder = config["data_folder"]
+        self.files = self._get_data_files()
+        self.batch_size = config["batch_size"]
+        self.num_epochs = config["num_epochs"]
+        self.output_dim = config["output_dim"]
+        self.test_size = config["test_size"]
+        self.coord_dim = config["coord_dim"]
+        self.param_dim = config["param_dim"]
+        self.hidden_size = config["hidden_size"]
+        self.num_hidden_layers = config["num_hidden_layers"]
+        self.print_every = config["print_every"]
+        self.shuffle = config["shuffle"]
+        self.dimension = config["dimension"]
+        self.param_columns = config["param_columns"]
+        self.loss_history_file_name = "loss_history.png"
+        self.lhs_sample = config["lhs_sample"]
+
+        self.npz_path = "Data/processed_data.npz"
+        self.output_path = "Data/processed_data.npz"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
         self.predicted_output_file = os.path.join(
-            project_root, "Outputs",self.project_name, "predicted_output.csv"
+            project_root, "Outputs", self.project_name, "predicted_output.csv"
         )
-        self.lhs_sample = 500000
-        
