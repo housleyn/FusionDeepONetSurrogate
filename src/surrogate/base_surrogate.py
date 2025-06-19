@@ -21,8 +21,11 @@ class BaseSurrogate:
         self.files = files
         self.loss_history_file_name = "loss_history_test.png"
         self.model_path = "src/model/fusion_deeponet.pt"
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
         self.predicted_output_file = os.path.join(
-            os.path.dirname(__file__), "Outputs", "predicted_output.csv"
+            project_root, "Outputs", "predicted_output.csv"
         )
         self.lhs_sample = 500000
         self.project_name = "semi_ellipse1"
