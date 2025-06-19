@@ -43,11 +43,12 @@ class MethodsInference:
             'Density (kg/m^3)', 'Velocity[i] (m/s)', 'Velocity[j] (m/s)', 'Velocity[k] (m/s)',
             'Absolute Pressure (Pa)', "X (m)", "Y (m)", "Z (m)"
         ]
-        # Get the directory of the current script
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        outputs_dir = os.path.join(project_root, "Outputs")
-        
-        out_path = os.path.join(outputs_dir, "predicted_output.csv")
+
+        if out_path is None:
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            outputs_dir = os.path.join(project_root, "Outputs")
+            out_path = os.path.join(outputs_dir, "predicted_output.csv")
+
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, mode='w', newline='') as f:
             writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)

@@ -1,5 +1,5 @@
 class BasePreprocess:
-    def __init__(self, files, dimension, output_path, param_columns, lhs_sample):
+    def __init__(self, files, dimension, output_path, param_columns, lhs_sample=100):
 
 
         self.files = files
