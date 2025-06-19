@@ -50,6 +50,7 @@ class MethodsPostprocess:
         plt.savefig(os.path.join(self.tables_dir, "relative_l2_errors.png"), bbox_inches='tight')
         plt.close()
 
+
     def _plot_fields(self,field, error):
         x = self.df_true["X (m)"].values
         y = self.df_true["Y (m)"].values
@@ -124,3 +125,42 @@ class MethodsPostprocess:
         os.makedirs(error_dir, exist_ok=True)
         plt.savefig(os.path.join(error_dir, f"{safe_field}_comparison.png"))
         plt.close()
+        print(f"Saved comparison plot for {field} to {error_dir}/{safe_field}_comparison.png")
+
+    def _plot_predicted_only(self):
+        self._define_ouput_folders()
+        fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
+                "Absolute Pressure (Pa)", "Density (kg/m^3)"]
+
+        for field in fields:
+            x = self.df_pred["X (m)"].values
+            y = self.df_pred["Y (m)"].values
+            z = self.df_pred[field].values
+
+            xi = np.linspace(x.min(), x.max(), 500)
+            yi = np.linspace(y.min(), y.max(), 500)
+            xi, yi = np.meshgrid(xi, yi)
+            zi = griddata((x, y), z, (xi, yi), method='cubic')
+
+            # Mask ellipse
+            a, b = 1.44, 1.16
+            x0, y0 = -2.5, 0
+            mask = ((xi - x0)**2 / a**2 + (yi - y0)**2 / b**2) <= 1
+            zi[mask] = np.nan
+
+            # Plot
+            fig, ax = plt.subplots(figsize=(6, 6))
+            contour = ax.contourf(xi, yi, zi, levels=100, cmap="inferno")
+            cbar = fig.colorbar(contour)
+            cbar.set_label(f"{field} Color Scale")
+            ax.set_title(f"{field} - Predicted Only")
+            ax.set_xlabel("X (m)")
+            ax.set_ylabel("Y (m)")
+
+            safe_field = field.replace(' ', '_').replace('[','').replace(']','')\
+                            .replace('(','').replace(')','').replace('/','_')
+            pred_dir = os.path.join(self.figures_dir, "predicted_only")
+            os.makedirs(pred_dir, exist_ok=True)
+            plt.savefig(os.path.join(pred_dir, f"{safe_field}_predicted.png"))
+            plt.close()
+            print(f"Saved predicted plot for {field} to {pred_dir}/{safe_field}_predicted.png")

@@ -56,6 +56,17 @@ class MethodsSurrogate:
         plt.savefig(os.path.join(fig_dir, self.loss_history_file_name))
         plt.show()
 
+    def _infer_and_validate(self, file):
+        inference = Inference(model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
+        coords_np, params_np = inference.load_csv_input(file)
+        params = params_np[1]
+        output = inference.predict(coords_np, params)
+        inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
+        print(f"Inference complete. Output saved to {self.predicted_output_file}.")
+        print("Beginning postprocessing...")
+        postprocess = Postprocess(path_true=file, path_pred=self.predicted_output_file, param_columns=self.param_columns)
+        postprocess.run()
+    
     def _inference(self, file):
         inference = Inference(model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
         coords_np, params_np = inference.load_csv_input(file)
@@ -64,6 +75,7 @@ class MethodsSurrogate:
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
         print("Beginning postprocessing...")
-        postprocess = Postprocess(path_true=self.true_data, path_pred=self.predicted_output_file, param_columns=self.param_columns)
-        postprocess.run()
+        postprocess = Postprocess(path_true=None, path_pred=self.predicted_output_file, param_columns=self.param_columns)
+        postprocess._plot_predicted_only()
+
         
