@@ -1,9 +1,11 @@
 import torch
 import os
 class BaseSurrogate:
-    def __init__(self, files=None):
+    def __init__(self):
 
         self.project_name = "semi_ellipse1"
+        self.data_folder = "Data/ellipse_data"
+        self.files = self._get_data_files()
         self.npz_path = "Data/processed_data.npz"
         self.batch_size = 1
         self.num_epochs = 10
@@ -19,7 +21,7 @@ class BaseSurrogate:
         self.dimension = 2  # 2D or 3D problem
         self.output_path = "Data/processed_data.npz"
         self.param_columns = ["a", "b"]
-        self.files = files
+        
         self.loss_history_file_name = "loss_history_test.png"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
         project_root = os.path.dirname(

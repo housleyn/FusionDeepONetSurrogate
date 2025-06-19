@@ -6,6 +6,7 @@ from src.inference import Inference
 from src.postprocess import Postprocess
 import matplotlib.pyplot as plt
 import os
+import glob
 
 class MethodsSurrogate:
     
@@ -79,3 +80,6 @@ class MethodsSurrogate:
         postprocess._plot_predicted_only()
 
         
+    def _get_data_files(self):
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.data_folder))
+        return sorted(glob.glob(os.path.join(base_dir, "*.csv")))
