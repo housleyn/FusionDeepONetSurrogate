@@ -5,7 +5,7 @@ class MethodsTrainer:
     def train(self, train_loader, test_loader, num_epochs, print_every):
         loss_history, test_loss_history = [], []
         best_loss = float('inf')
-        os.makedirs('checkpoints', exist_ok=True)
+        os.makedirs('src/checkpoints', exist_ok=True)
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
@@ -46,7 +46,7 @@ class MethodsTrainer:
                     'scheduler_state_dict': self.lr_scheduler.state_dict(),
                     'loss': test_loss
                 }
-                torch.save(checkpoint, 'checkpoints/best_model.pt')
+                torch.save(checkpoint, 'src/checkpoints/best_model.pt')
 
             if epoch % print_every == 0 or epoch == num_epochs - 1:
                 print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e}")
@@ -78,7 +78,7 @@ class MethodsTrainer:
         self.model.load_state_dict(torch.load(path))
         self.model.eval()
 
-    def load_checkpoint(self, path="checkpoints/best_model.pt"):
+    def load_checkpoint(self, path="src/checkpoints/best_model.pt"):
         checkpoint = torch.load(path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

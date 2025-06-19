@@ -34,7 +34,9 @@ Step 1_instantiate: In this step you simply create an instance and call it what 
 
 Step 2_train: This command will train the surrogate based on the settings provided. You should note that typically, this step need not be repeated. If you have provided enough data, the surrogate only needs to be trained once, and can then make as many inferences as you'd like.
 
-Step 3_infer: This command will make an inference on the .csv file that you pass in. The format of this csv file is similar to the format of your training data. There are two possible commands to run: infer, and infer with validation. Just infering will simply take your input file and run it through the model and output data and visuals. If you wish to infer and validate, the file you pass in will also contain 'true' data for all of the flow fields, this command will pass your file through the model and compare the surrogate's outputs with the 'true' data. This comparison involves eror plots and tables showing the accuracy of the model.
+Step 3_infer: This command will make an inference on the .csv file that you pass in. The format of this csv file is similar to the format of your training data. There are two possible commands to run: infer, and infer with validation. Just infering will simply take your input file and run it through the model and output data and visuals. If you wish to infer and validate, the file you pass in will also contain 'true' data for all of the flow fields, this command will pass your file through the model and compare the surrogate's outputs with the 'true' data. If you wish to validate, you must have all 5 flow field properties. This comparison involves error plots and tables showing the accuracy of the model.
+
+The format of the infering and validating file should be exactly like the format of the training files. The format of the file in case of just infering should be similar but without the flow field propertis; flow parameters should still be repeated for each coordinate.
 
 
 #input txt file for surrogate object

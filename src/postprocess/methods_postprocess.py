@@ -5,10 +5,14 @@ from scipy.interpolate import griddata
 import os
 
 class MethodsPostprocess:
-    def run(self):
+    def run(self,dimension):
         error = self._calculate_error()
         self._define_ouput_folders()
-        fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
+        if dimension == 2:
+            fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)",
+                "Absolute Pressure (Pa)", "Density (kg/m^3)"]
+        else:
+            fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
                 "Absolute Pressure (Pa)", "Density (kg/m^3)"]
         
         for field in fields:
@@ -159,7 +163,7 @@ class MethodsPostprocess:
 
             safe_field = field.replace(' ', '_').replace('[','').replace(']','')\
                             .replace('(','').replace(')','').replace('/','_')
-            pred_dir = os.path.join(self.figures_dir, "predicted_only")
+            pred_dir = os.path.join(self.figures_dir, "predictions")
             os.makedirs(pred_dir, exist_ok=True)
             plt.savefig(os.path.join(pred_dir, f"{safe_field}_predicted.png"))
             plt.close()
