@@ -22,6 +22,12 @@ class MethodsInference:
     def _denormalize(self, output):
         return output * self.stats["outputs_std"] + self.stats["outputs_mean"]
 
+    def load_csv_input(self, csv_path):
+        df = pd.read_csv(csv_path)
+        coords_np = df[["X (m)", "Y (m)", "Z (m)"]].values
+        params_np = df[self.param_columns].values
+        return coords_np, params_np
+    
     def predict(self, coords_np, params):
         coords = torch.tensor(coords_np, dtype=torch.float32).unsqueeze(0).to(self.device)
         params = torch.tensor(params, dtype=torch.float32).unsqueeze(0).to(self.device)
@@ -30,13 +36,7 @@ class MethodsInference:
             pred = self.model(coords, params)
         pred = self._denormalize(pred)
         return pred.squeeze(0).cpu().numpy()
-
-    def load_csv_input(self, csv_path):
-        df = pd.read_csv(csv_path)
-        coords_np = df[["X (m)", "Y (m)", "Z (m)"]].values
-        params_np = df[self.param_columns].values
-        return coords_np, params_np
-
+    
     def save_to_csv(self, coords_np, output_np, out_path=None):
 
         headers = [

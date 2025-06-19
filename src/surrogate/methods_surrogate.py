@@ -3,6 +3,7 @@ from src.dataloader import Data
 from src.trainer import Trainer
 from src.preprocess import Preprocess
 from src.inference import Inference
+from src.postprocess import Postprocess
 import matplotlib.pyplot as plt
 import os
 
@@ -62,4 +63,7 @@ class MethodsSurrogate:
         output = inference.predict(coords_np, params)
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
+        print("Beginning postprocessing...")
+        postprocess = Postprocess(path_true=self.true_data, path_pred=self.predicted_output_file, param_columns=self.param_columns)
+        postprocess.run()
         
