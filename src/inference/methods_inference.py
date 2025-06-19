@@ -3,8 +3,6 @@ from ..model import FusionDeepONet
 import csv
 import numpy as np 
 import pandas as pd
-import pyvista as pv
-import matplotlib.pyplot as plt
 import os
 
 class MethodsInference:
@@ -17,26 +15,17 @@ class MethodsInference:
     def _load_stats(self, npz_path):
         data = np.load(npz_path)
         return {
-            "coords_mean": torch.tensor(data["coords_mean"], dtype=torch.float32),
-            "coords_std": torch.tensor(data["coords_std"], dtype=torch.float32),
-            "radii_mean": torch.tensor(data["radii_mean"], dtype=torch.float32),
-            "radii_std": torch.tensor(data["radii_std"], dtype=torch.float32),
             "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
             "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
         }
 
     def _denormalize(self, output):
-        print("Output shape:", output.shape)
-        print("Output mean shape:", self.stats["outputs_mean"].shape)
-        print("Output std shape:", self.stats["outputs_std"].shape)
         return output * self.stats["outputs_std"] + self.stats["outputs_mean"]
 
     def predict(self, coords_np, params):
         coords = torch.tensor(coords_np, dtype=torch.float32).unsqueeze(0).to(self.device)
-        params = torch.tensor([params], dtype=torch.float32).to(self.device)
-        
-
-       
+        params = torch.tensor(params, dtype=torch.float32).to(self.device)
+               
         with torch.no_grad():
             pred = self.model(coords, params)
         pred = self._denormalize(pred)
@@ -45,27 +34,18 @@ class MethodsInference:
     def load_csv_input(self, csv_path):
         df = pd.read_csv(csv_path)
         coords_np = df[["X (m)", "Y (m)", "Z (m)"]].values
-        if "Sphere Radius" in df.columns:
-            radius_val = np.float32(df["Sphere Radius"].iloc[0])
-        elif "sphere_radius" in df.columns:
-            radius_val = np.float32(df["sphere_radius"].iloc[0])
-        elif "a" in df.columns:
-            a = np.float32(df["a"].iloc[0])
-            b = np.float32(df["b"].iloc[0])
-            return coords_np, a, b
-        
-        else:
-            raise ValueError("CSV must contain a 'Sphere Radius' column.")
-        return coords_np, radius_val
+        params_np = df[self.param_columns].values
+        return coords_np, params_np
 
-    def save_to_csv(self, coords_np, output_np, radius_val, out_path="predicted_output.csv"):
+    def save_to_csv(self, coords_np, output_np, out_path=None):
+
         headers = [
             'Density (kg/m^3)', 'Velocity[i] (m/s)', 'Velocity[j] (m/s)', 'Velocity[k] (m/s)',
-            'Absolute Pressure (Pa)', "Sphere Radius", "X (m)", "Y (m)", "Z (m)"
+            'Absolute Pressure (Pa)', "X (m)", "Y (m)", "Z (m)"
         ]
-        results_dir = os.path.join("Tables_and_Figures", "tables")
-        os.makedirs(results_dir, exist_ok=True)
-        out_path = os.path.join(results_dir, out_path)
+        # Get the directory of the current script
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        out_path = os.path.join(current_dir, out_path)
         with open(out_path, mode='w', newline='') as f:
             writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(headers)
@@ -74,51 +54,7 @@ class MethodsInference:
                 vel = output_np[i, 1:4]
                 pressure = output_np[i, 4]
 
-                row = [density] + list(vel) + [pressure, radius_val] + list(coords_np[i])
+                row = [density] + list(vel) + [pressure] + list(coords_np[i])
                 writer.writerow(row)
 
-    def save_to_vtk(self, coords_np, output_np, out_path="predicted_output.vtk"):
-        cloud = pv.PolyData(coords_np)
-        cloud["velocity"] = output_np[:, 1:4]
-        cloud["pressure"] = output_np[:, 4]
-        cloud["density"] = output_np[:, 0]
-        vtk_dir = os.path.join("Tables_and_Figures", "figures")
-        os.makedirs(vtk_dir, exist_ok=True)
-        out_path = os.path.join(vtk_dir, out_path)
-        cloud.save(out_path)
-        print(f"✅ VTK file saved to: {out_path}")
 
-    def relative_L2_norm_error_per_field(csv_true, csv_pred, columns):
-        df_true = pd.read_csv(csv_true)
-        df_pred = pd.read_csv(csv_pred)
-
-        assert np.allclose(
-            df_true[["X (m)", "Y (m)", "Z (m)"]].values,
-            df_pred[["X (m)", "Y (m)", "Z (m)"]].values
-        ), "Coordinate mismatch"
-
-        data = []
-        for col in columns:
-            error = df_pred[col].values - df_true[col].values
-            rel_rmse = np.sqrt(np.sum(error**2) / np.sum(df_true[col].values**2))
-            data.append([col, f"{rel_rmse * 100:.2f}%"])
-
-        return data
-
-    def plot_table(data):
-        fig, ax = plt.subplots()
-        ax.axis('off')
-        table = ax.table(
-            cellText=data,
-            colLabels=["Field", "% Error"],
-            loc='center',
-            cellLoc='center'
-        )
-        table.auto_set_font_size(False)
-        table.set_fontsize(12)
-        table.scale(1.2, 1.2)
-        plt.tight_layout()
-        tables_dir = os.path.join("Tables_and_Figures", "tables")
-        os.makedirs(tables_dir, exist_ok=True)
-        plt.savefig(os.path.join(tables_dir, "rmse_table.png"), dpi=300)
-        plt.show()

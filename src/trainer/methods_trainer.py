@@ -71,7 +71,7 @@ class MethodsTrainer:
 
         return total_loss / total_samples
 
-    def save_model(self, path="fusion_deeponet.pt"):
+    def save_model(self, path="src/model/fusion_deeponet.pt"):
         torch.save(self.model.state_dict(), path)
 
     def load_model(self, path):

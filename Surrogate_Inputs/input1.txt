@@ -1,0 +1,2 @@
+input model architecture
+surrogate parameters
