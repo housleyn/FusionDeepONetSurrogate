@@ -37,9 +37,9 @@ class MethodsSurrogate:
         print("Model created with specified architecture.")
 
     def _train_model(self):
-        trainer = Trainer(self.model, self.train_loader, device=self.device)
+        trainer = Trainer(self.project_name, self.model, self.train_loader, device=self.device)
         self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
-        trainer.save_model(self.model_path)
+        trainer.save_model()
         self._plot_loss_history()
         print("Training complete. Loss history and model saved.")
     
@@ -51,13 +51,13 @@ class MethodsSurrogate:
         plt.title("Training and Testing Loss History")
         plt.legend()
         plt.grid(True)
-        fig_dir = os.path.join("Tables_and_Figures", "figures", "loss_history")
+        fig_dir = os.path.join("Outputs",f"{self.project_name}")
         os.makedirs(fig_dir, exist_ok=True)
         plt.savefig(os.path.join(fig_dir, self.loss_history_file_name))
         plt.close()
 
     def _infer_and_validate(self, file):
-        inference = Inference(model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
+        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
         coords_np, params_np = inference.load_csv_input(file)
         params = params_np[1]
         output = inference.predict(coords_np, params)
@@ -68,7 +68,7 @@ class MethodsSurrogate:
         postprocess.run(self.dimension)
     
     def _inference(self, file):
-        inference = Inference(model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
+        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
         coords_np, params_np = inference.load_csv_input(file)
         params = params_np[1]
         output = inference.predict(coords_np, params)

@@ -47,7 +47,7 @@ class MethodsInference:
         if out_path is None:
             project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             outputs_dir = os.path.join(project_root, "Outputs")
-            out_path = os.path.join(outputs_dir, "predicted_output.csv")
+            out_path = os.path.join(outputs_dir,self.project_name, "predicted_output.csv")
 
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, mode='w', newline='') as f:

@@ -3,6 +3,7 @@ import os
 class BaseSurrogate:
     def __init__(self, files=None):
 
+        self.project_name = "semi_ellipse1"
         self.npz_path = "Data/processed_data.npz"
         self.batch_size = 1
         self.num_epochs = 10
@@ -20,12 +21,12 @@ class BaseSurrogate:
         self.param_columns = ["a", "b"]
         self.files = files
         self.loss_history_file_name = "loss_history_test.png"
-        self.model_path = "src/model/fusion_deeponet.pt"
+        self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
         self.predicted_output_file = os.path.join(
-            project_root, "Outputs", "predicted_output.csv"
+            project_root, "Outputs",self.project_name, "predicted_output.csv"
         )
         self.lhs_sample = 500000
-        self.project_name = "semi_ellipse1"
+        
