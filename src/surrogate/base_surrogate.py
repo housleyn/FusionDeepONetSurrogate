@@ -20,5 +20,5 @@ class BaseSurrogate:
         self.files = files
         self.loss_history_file_name = "loss_history_test.png"
         self.model_path = "src/model/fusion_deeponet.pt"
-        self.predicted_output_file = "methods_surrogate.py"
+        self.predicted_output_file = "predicted_output.csv"
         self.true_data = "Data/ellipse_data/ellipse_data_unseen2.csv"
