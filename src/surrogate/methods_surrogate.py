@@ -64,7 +64,7 @@ class MethodsSurrogate:
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
         print("Beginning postprocessing...")
-        postprocess = Postprocess(path_true=file, path_pred=self.predicted_output_file, param_columns=self.param_columns)
+        postprocess = Postprocess(self.project_name, path_true=file, path_pred=self.predicted_output_file, param_columns=self.param_columns)
         postprocess.run(self.dimension)
     
     def _inference(self, file):
@@ -75,7 +75,7 @@ class MethodsSurrogate:
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
         print("Beginning postprocessing...")
-        postprocess = Postprocess(path_true=None, path_pred=self.predicted_output_file, param_columns=self.param_columns)
+        postprocess = Postprocess(self.project_name, path_true=None, path_pred=self.predicted_output_file, param_columns=self.param_columns)
         postprocess._plot_predicted_only()
 
         

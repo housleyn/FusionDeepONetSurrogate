@@ -44,11 +44,11 @@ class MethodsInference:
             'Absolute Pressure (Pa)', "X (m)", "Y (m)", "Z (m)"
         ]
         # Get the directory of the current script
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        if out_path is None:
-            out_path = os.path.join(current_dir, "predicted_output.csv")
-        elif not os.path.isabs(out_path):
-            out_path = os.path.join(current_dir, out_path)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        outputs_dir = os.path.join(project_root, "Outputs")
+        
+        out_path = os.path.join(outputs_dir, "predicted_output.csv")
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, mode='w', newline='') as f:
             writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(headers)

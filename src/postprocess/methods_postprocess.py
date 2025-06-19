@@ -34,8 +34,8 @@ class MethodsPostprocess:
             self.errors[field] = rel_l2
 
     def _define_ouput_folders(self):
-        self.figures_dir = os.path.join("Tables_and_Figures", "figures")
-        self.tables_dir = os.path.join("Tables_and_Figures", "tables")
+        self.figures_dir = os.path.join("Outputs", self.project_name)
+        self.tables_dir = os.path.join("Outputs", self.project_name)
         os.makedirs(self.figures_dir, exist_ok=True)
 
     def _create_table(self):

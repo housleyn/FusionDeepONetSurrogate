@@ -1,6 +1,6 @@
 import pandas as pd
 class BasePostprocess:
-    def __init__(self, path_true=None, path_pred=None, param_columns=None):
+    def __init__(self, project_name,path_true=None, path_pred=None, param_columns=None):
 
         if path_true is None:
             self.df_true = None
@@ -10,3 +10,4 @@ class BasePostprocess:
         self.df_pred = df_pred[["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
                         "Absolute Pressure (Pa)", "Density (kg/m^3)", "X (m)", "Y (m)", "Z (m)"]]
         self.errors = {}
+        self.project_name = project_name
