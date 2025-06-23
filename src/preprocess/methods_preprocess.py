@@ -19,6 +19,7 @@ class MethodsPreprocess:
 
             
             param_vec = df[self.param_columns].to_numpy()
+            param_vec = self._reduce_params(param_vec)
 
             self.coords.append(coords)
             self.params.append(param_vec)
@@ -69,7 +70,19 @@ class MethodsPreprocess:
         coords = coords_full[indices]
         outputs = outputs_full[indices]
         return coords, outputs
-    
+
+    def _reduce_params(self, param_vec):
+        """Reduce parameter dimensionality.
+
+        Currently if two columns are provided, compute the aspect ratio
+        by dividing the first column by the second.
+        """
+        param_vec = np.asarray(param_vec)
+        if param_vec.ndim == 2 and param_vec.shape[1] == 2:
+            aspect_ratio = param_vec[:, 0] / param_vec[:, 1]
+            return aspect_ratio[:, None]
+        return param_vec
+
     def _pad(self, arr):
         arr = np.asarray(arr)
         n_pad = self.npts_max - arr.shape[0]
@@ -88,7 +101,7 @@ class MethodsPreprocess:
             self.output_path,
             coords=X_coords,           # shape: (num_samples, npts_max, 3)
             outputs=Y_outputs,         # shape: (num_samples, npts_max, output_dim)
-            params=G_params,           # shape: (num_samples, 2)
+            params=G_params,           # shape: (num_samples, param_dim)
             outputs_mean=self.outputs_mean,   # shape: (output_dim,)
             outputs_std=self.outputs_std,     # shape: (output_dim,)
         )

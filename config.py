@@ -8,7 +8,7 @@ config = {
     "output_dim": 5,
     "test_size": 0.2,
     "coord_dim": 3,
-    "param_dim": 2,
+    "param_dim": 1,
     "hidden_size": 32,
     "num_hidden_layers": 3,
     "print_every": 1,
