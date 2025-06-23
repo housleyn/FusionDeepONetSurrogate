@@ -72,6 +72,12 @@ def test_preprocess_load_and_pad_2D(preprocess_instance2D):
     assert preprocess_instance2D.outputs_mean is not None
     assert preprocess_instance2D.outputs_std is not None
 
+def test_param_reduction(preprocess_instance2D):
+    preprocess_instance2D.load_and_pad()
+    _, _, params = preprocess_instance2D.to_numpy()
+    assert params.shape[1] == 1
+    assert np.isclose(params[0,0], 0.5)
+
 def test_preprocess_load_and_pad_3D(preprocess_instance3D):
     preprocess_instance3D.load_and_pad()
     
