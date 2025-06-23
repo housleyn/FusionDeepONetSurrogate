@@ -2,7 +2,7 @@ import os
 import yaml
 
 config = {
-    "project_name": "semi_ellipse1",
+    "project_name": "semi_ellipse2",
     "batch_size": 1,
     "num_epochs": 10,
     "output_dim": 5,

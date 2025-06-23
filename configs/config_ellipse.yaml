@@ -13,6 +13,6 @@ param_columns:
 - b
 param_dim: 1
 print_every: 1
-project_name: semi_ellipse1
+project_name: semi_ellipse2
 shuffle: false
 test_size: 0.2
