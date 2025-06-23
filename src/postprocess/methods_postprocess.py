@@ -70,8 +70,8 @@ class MethodsPostprocess:
         zi_error = np.abs(zi_error)
 
             # Define semi-ellipse mask
-        a = 1.44  # replace with actual
-        b = 1.16  # replace with actual
+        a = self.df_true["a"].values[0]  # Assuming a is a constant for the ellipse
+        b = self.df_true["b"].values[0]  # Assuming b is a
         x0, y0 = -2.5, 0
         mask = ((xi - x0)**2 / a**2 + (yi - y0)**2 / b**2) <= 1
 
@@ -131,7 +131,7 @@ class MethodsPostprocess:
         plt.close()
         print(f"Saved comparison plot for {field} to {error_dir}/{safe_field}_comparison.png")
 
-    def _plot_predicted_only(self):
+    def _plot_predicted_only(self, params):
         self._define_ouput_folders()
         fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
                 "Absolute Pressure (Pa)", "Density (kg/m^3)"]
@@ -147,7 +147,7 @@ class MethodsPostprocess:
             zi = griddata((x, y), z, (xi, yi), method='cubic')
 
             # Mask ellipse
-            a, b = 1.44, 1.16
+            a, b = params[0], params[1]  # Assuming params contains a and b for the ellipse
             x0, y0 = -2.5, 0
             mask = ((xi - x0)**2 / a**2 + (yi - y0)**2 / b**2) <= 1
             zi[mask] = np.nan

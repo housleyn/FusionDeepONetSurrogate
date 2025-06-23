@@ -9,7 +9,7 @@ class MethodsInference:
     def _load_model(self, path, stats_path):
         with np.load(stats_path) as data:
             param_dim = data["params"].shape[1]
-        model = FusionDeepONet(coord_dim=3, param_dim=param_dim, hidden_size=32, num_hidden_layers=3, out_dim=5)
+        model = FusionDeepONet(coord_dim=3, param_dim=2, hidden_size=32, num_hidden_layers=3, out_dim=5)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model

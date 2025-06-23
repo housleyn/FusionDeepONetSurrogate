@@ -77,7 +77,7 @@ class MethodsSurrogate:
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
         print("Beginning postprocessing...")
         postprocess = Postprocess(self.project_name, path_true=None, path_pred=self.predicted_output_file, param_columns=self.param_columns)
-        postprocess._plot_predicted_only()
+        postprocess._plot_predicted_only(params)
 
         
     def _get_data_files(self):

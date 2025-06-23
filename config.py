@@ -4,7 +4,7 @@ import yaml
 config = {
     "project_name": "semi_ellipse2",
     "batch_size": 1,
-    "num_epochs": 10,
+    "num_epochs": 50000,
     "output_dim": 5,
     "test_size": 0.2,
     "coord_dim": 3,
@@ -21,7 +21,7 @@ config = {
 }
 
 os.makedirs("configs", exist_ok=True)
-with open("configs/config_ellipse.yaml", "w") as f:
+with open("configs/config_ellipse_super_computer.yaml", "w") as f:
     yaml.dump(config, f)
 
     #CAN ADD LOGIC HERE TO MAKE MULTIPLE CONFIGS ON TOP OF A BASE CONFIG
