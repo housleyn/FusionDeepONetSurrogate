@@ -19,7 +19,7 @@ class MethodsPreprocess:
 
             
             param_vec = df[self.param_columns].to_numpy()
-            param_vec = self._reduce_params(param_vec)
+            # param_vec = self._reduce_params(param_vec)
 
             self.coords.append(coords)
             self.params.append(param_vec)

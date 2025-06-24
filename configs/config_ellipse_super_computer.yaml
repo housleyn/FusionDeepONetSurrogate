@@ -11,7 +11,7 @@ output_dim: 5
 param_columns:
 - a
 - b
-param_dim: 1
+param_dim: 2
 print_every: 1
 project_name: semi_ellipse2
 shuffle: false
