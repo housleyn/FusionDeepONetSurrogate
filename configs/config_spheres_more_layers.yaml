@@ -1,0 +1,19 @@
+batch_size: 1
+coord_dim: 3
+data_folder: Data/sphere_formation_data
+dimension: 2
+hidden_size: 64
+inference_file: Data/sphere_formation_data/sf0.csv
+lhs_sample: 500000
+lr: 0.01
+num_epochs: 50000
+num_hidden_layers: 5
+output_dim: 5
+param_columns:
+- x
+- y
+param_dim: 2
+print_every: 1
+project_name: sphere_formation_more_layers
+shuffle: false
+test_size: 0.2

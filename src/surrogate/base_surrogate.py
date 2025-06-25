@@ -23,6 +23,7 @@ class BaseSurrogate:
         self.param_columns = config["param_columns"]
         self.loss_history_file_name = "loss_history.png"
         self.lhs_sample = config["lhs_sample"]
+        self.lr = config["lr"]
 
         self.npz_path = "Data/processed_data.npz"
         self.output_path = "Data/processed_data.npz"

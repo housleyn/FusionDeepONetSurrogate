@@ -38,7 +38,7 @@ class MethodsSurrogate:
         print("Model created with specified architecture.")
 
     def _train_model(self):
-        trainer = Trainer(self.project_name, self.model, self.train_loader, device=self.device)
+        trainer = Trainer(self.project_name, self.model, self.train_loader, device=self.device, lr=self.lr)
         self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
         trainer.save_model()
         self._plot_loss_history()
@@ -57,7 +57,7 @@ class MethodsSurrogate:
         plt.savefig(os.path.join(fig_dir, self.loss_history_file_name))
         plt.close()
 
-    def _infer_and_validate(self, file):
+    def _infer_and_validate(self, file, shape):
         inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
         coords_np, params_np = inference.load_csv_input(file)
         params = params_np[1]
@@ -66,7 +66,7 @@ class MethodsSurrogate:
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
         print("Beginning postprocessing...")
         postprocess = Postprocess(self.project_name, path_true=file, path_pred=self.predicted_output_file, param_columns=self.param_columns)
-        postprocess.run(self.dimension)
+        postprocess.run(self.dimension, shape)
     
     def _inference(self, file):
         inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)

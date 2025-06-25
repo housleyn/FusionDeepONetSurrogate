@@ -2,26 +2,27 @@ import os
 import yaml
 
 config = {
-    "project_name": "semi_ellipse2",
-    "batch_size": 1,
+    "project_name": "sphere_formation_big_batch",
+    "lr": 1e-3,
+    "batch_size": 36,
     "num_epochs": 50000,
     "output_dim": 5,
     "test_size": 0.2,
     "coord_dim": 3,
-    "param_dim": 1,
+    "param_dim": 2,
     "hidden_size": 32,
     "num_hidden_layers": 3,
     "print_every": 1,
-    "shuffle": False,
+    "shuffle": True,
     "dimension": 2,
-    "param_columns": ["a", "b"],
+    "param_columns": ["x", "y"],
     "lhs_sample": 500000,
-    "data_folder": "Data/ellipse_data",
-    "inference_file": "Data/ellipse_data/ellipse_data_unseen2.csv"
+    "data_folder": "Data/sphere_formation_data",
+    "inference_file": "Data/sphere_formation_data/sf0.csv"
 }
 
 os.makedirs("configs", exist_ok=True)
-with open("configs/config_ellipse_super_computer.yaml", "w") as f:
+with open("configs/config_spheres_big_batch.yaml", "w") as f:
     yaml.dump(config, f)
 
     #CAN ADD LOGIC HERE TO MAKE MULTIPLE CONFIGS ON TOP OF A BASE CONFIG
