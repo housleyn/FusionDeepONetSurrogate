@@ -71,17 +71,6 @@ class MethodsPreprocess:
         outputs = outputs_full[indices]
         return coords, outputs
 
-    def _reduce_params(self, param_vec):
-        """Reduce parameter dimensionality.
-
-        Currently if two columns are provided, compute the aspect ratio
-        by dividing the first column by the second.
-        """
-        param_vec = np.asarray(param_vec)
-        if param_vec.ndim == 2 and param_vec.shape[1] == 2:
-            aspect_ratio = param_vec[:, 0] / param_vec[:, 1]
-            return aspect_ratio[:, None]
-        return param_vec
 
     def _pad(self, arr):
         arr = np.asarray(arr)
