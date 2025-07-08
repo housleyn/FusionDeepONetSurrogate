@@ -12,13 +12,14 @@ class MethodsTrainer:
             self.model.train()
             total_samples = 0
 
-            for coords, params, targets in train_loader:
+            for coords, params, targets, sdf in train_loader:
                 coords = coords.to(self.device)
                 params = params.to(self.device)
                 targets = targets.to(self.device)
+                sdf = sdf.to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(coords, params)
+                outputs = self.model(coords, params, sdf)
                 loss = self.criterion(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
@@ -58,12 +59,13 @@ class MethodsTrainer:
         total_loss = 0.0
         total_samples = 0
         with torch.no_grad():
-            for coords, params, targets in dataloader:
+            for coords, params, targets, sdf in dataloader:
                 coords = coords.to(self.device)
                 params = params.to(self.device)
                 targets = targets.to(self.device)
+                sdf = sdf.to(self.device)
 
-                outputs = self.model(coords, params)
+                outputs = self.model(coords, params, sdf)
                 loss = self.criterion(outputs, targets)
                 batch_size = targets.size(0)
                 total_loss += loss.item() * batch_size

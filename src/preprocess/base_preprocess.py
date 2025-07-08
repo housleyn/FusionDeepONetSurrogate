@@ -8,6 +8,7 @@ class BasePreprocess:
         self.coords = []
         self.params = []
         self.outputs = []
+        self.sdf = []
         self.npts_max = 0  
         self.dimension = dimension
         self.lhs_applied = False
