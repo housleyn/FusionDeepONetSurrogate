@@ -111,7 +111,8 @@ class MethodsPostprocess:
                 cbar.set_label("Error Color Scale")
                 cbar.ax.tick_params(labelsize=14)
             else:
-                contour = ax.contourf(xi, yi, data, levels=100, cmap=cmap, vmin=vmin_tp, vmax=vmax_tp)
+                levels = np.linspace(vmin_tp, vmax_tp, 100)
+                contour = ax.contourf(xi, yi, data, levels=levels, cmap=cmap, vmin=vmin_tp, vmax=vmax_tp)
                 cbar = fig.colorbar(contour, ax=ax, ticks=ticks_tp)
                 cbar.ax.set_yticklabels(tick_labels_tp)
                 cbar.set_label(f"{field} Color Scale")

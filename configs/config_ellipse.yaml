@@ -16,3 +16,4 @@ print_every: 1
 project_name: semi_ellipse1
 shuffle: false
 test_size: 0.2
+lr: 0.0001
