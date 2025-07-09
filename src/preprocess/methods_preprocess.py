@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import qmc 
 from sklearn.neighbors import NearestNeighbors
+from src.sdf import SDF 
 
 class MethodsPreprocess:
     def load_and_pad(self):
@@ -17,13 +18,18 @@ class MethodsPreprocess:
                 coords = coords_full
                 outputs = outputs_full
 
-            
+            sdf_calculation = SDF()
             param_vec = df[self.param_columns].to_numpy()
+            if param_vec.shape[0] != coords.shape[0]:
+                param_vec = np.repeat(param_vec[:1], coords.shape[0], axis=0)
+            sdf_vec = sdf_calculation.sphere_formation_sdf(coords, param_vec)
             # param_vec = self._reduce_params(param_vec)
 
             self.coords.append(coords)
             self.params.append(param_vec)
             self.outputs.append(outputs)
+            self.sdf.append(sdf_vec)
+            
 
         self.npts_max = max(c.shape[0] for c in self.coords)
         
@@ -32,17 +38,22 @@ class MethodsPreprocess:
             padded_coords = []
             padded_params = []
             padded_outputs = []
-            for c, r, o in zip(self.coords, self.params, self.outputs):
+            padded_sdf = []
+            for c, r, o, s in zip(self.coords, self.params, self.outputs, self.sdf):
                 c_pad = self._pad(c)
                 r_pad = self._pad(r)
                 o_pad = self._pad(o)
+                s_pad = self._pad(s)
                 padded_coords.append(c_pad)
                 padded_params.append(r_pad)
                 padded_outputs.append(o_pad)
+                padded_sdf.append(s_pad)
 
+            self.sdf = padded_sdf
             self.coords = padded_coords
             self.params = padded_params
             self.outputs = padded_outputs
+            
         
         outputs_flat = np.vstack(self.outputs)
         outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
@@ -82,17 +93,20 @@ class MethodsPreprocess:
         X_coords = np.stack(self.coords)
         Y_outputs = np.stack(self.outputs)
         G_params = np.stack(self.params)[:, 0, :]
-        return X_coords, Y_outputs, G_params
+        S_sdf = np.stack(self.sdf)
+        return X_coords, Y_outputs, G_params, S_sdf
 
     def save(self):
-        X_coords, Y_outputs, G_params = self.to_numpy()
+        X_coords, Y_outputs, G_params, S_sdf = self.to_numpy()
         np.savez(
             self.output_path,
             coords=X_coords,           # shape: (num_samples, npts_max, 3)
             outputs=Y_outputs,         # shape: (num_samples, npts_max, output_dim)
             params=G_params,           # shape: (num_samples, param_dim)
+            sdf=S_sdf,              # shape: (num_samples, npts_max, 1)
             outputs_mean=self.outputs_mean,   # shape: (output_dim,)
             outputs_std=self.outputs_std,     # shape: (output_dim,)
+
         )
 
     def run_all(self):

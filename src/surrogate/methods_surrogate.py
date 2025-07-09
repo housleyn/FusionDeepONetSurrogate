@@ -38,7 +38,7 @@ class MethodsSurrogate:
         print("Model created with specified architecture.")
 
     def _train_model(self):
-        trainer = Trainer(self.project_name, self.model, self.train_loader, device=self.device, lr=self.lr)
+        trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr)
         self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
         trainer.save_model()
         self._plot_loss_history()

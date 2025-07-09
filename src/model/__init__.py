@@ -4,7 +4,7 @@ import torch
 
 class FusionDeepONet(BaseModel, MethodsModel):
 
-    def forward(self, coords, params):
+    def forward(self, coords, params, sdf):
         # coords: (batch, n_pts, coord_dim)
         # params: (batch, param_dim)
 
@@ -18,7 +18,7 @@ class FusionDeepONet(BaseModel, MethodsModel):
         for i in range(1, self.num_hidden_layers): #trunk fusion forloop
             S.append(branch_hiddens[i] + S[-1])
 
-        x = coords 
+        x = torch.cat((coords, sdf), dim=-1) 
         for i, (layer,act) in enumerate(zip(self.trunk_layers,self.trunk_activations)):
             x = act(layer(x))
 

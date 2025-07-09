@@ -10,7 +10,8 @@ def create_loaders():
     coords = torch.rand(4, 5, 3)
     params = torch.rand(4, 1)
     outputs = torch.rand(4, 5, 5)
-    dataset = torch.utils.data.TensorDataset(coords, params, outputs)
+    sdf = torch.rand(4, 5, 1)
+    dataset = torch.utils.data.TensorDataset(coords, params, outputs, sdf)
     loader = torch.utils.data.DataLoader(dataset, batch_size=2)
     return loader
 
@@ -28,7 +29,7 @@ class DummyModel(torch.nn.Module):
         super().__init__()
         self.w = torch.nn.Parameter(torch.zeros(1))
 
-    def forward(self, coords, params):
+    def forward(self, coords, params, sdf):
         batch, n, _ = coords.shape
         return torch.zeros(batch, n, 1) + self.w
 
@@ -37,7 +38,8 @@ def create_simple_loader():
     coords = torch.zeros(1, 4, 3)
     params = torch.zeros(1, 1)
     targets = torch.ones(1, 4, 1)
-    dataset = torch.utils.data.TensorDataset(coords, params, targets)
+    sdf = torch.zeros(1, 4, 1)
+    dataset = torch.utils.data.TensorDataset(coords, params, targets, sdf)
     return torch.utils.data.DataLoader(dataset, batch_size=1)
 
 
