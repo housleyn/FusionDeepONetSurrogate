@@ -20,6 +20,8 @@ class MethodsPreprocess:
 
             sdf_calculation = SDF()
             param_vec = df[self.param_columns].to_numpy()
+            if param_vec.shape[0] != coords.shape[0]:
+                param_vec = np.repeat(param_vec[:1], coords.shape[0], axis=0)
             sdf_vec = sdf_calculation.sphere_formation_sdf(coords, param_vec)
             # param_vec = self._reduce_params(param_vec)
 

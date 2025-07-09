@@ -74,9 +74,10 @@ def test_preprocess_load_and_pad_2D(preprocess_instance2D):
 
 def test_param_reduction(preprocess_instance2D):
     preprocess_instance2D.load_and_pad()
-    _, _, params = preprocess_instance2D.to_numpy()
-    assert params.shape[1] == 1
-    assert np.isclose(params[0,0], 0.5)
+    _, _, params, sdf = preprocess_instance2D.to_numpy()
+    assert params.shape[1] == 2
+    assert np.allclose(params[0], [1.0, 2.0])
+    assert sdf.ndim == 3
 
 def test_preprocess_load_and_pad_3D(preprocess_instance3D):
     preprocess_instance3D.load_and_pad()
@@ -88,4 +89,5 @@ def test_preprocess_load_and_pad_3D(preprocess_instance3D):
     assert preprocess_instance3D.lhs_applied is True
     assert preprocess_instance3D.outputs_mean is not None
     assert preprocess_instance3D.outputs_std is not None
+    assert len(preprocess_instance3D.sdf) > 0
 
