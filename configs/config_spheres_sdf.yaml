@@ -1,5 +1,5 @@
 batch_size: 36
-coord_dim: 4
+coord_dim: 3
 data_folder: Data/sphere_formation_data
 dimension: 2
 hidden_size: 32
