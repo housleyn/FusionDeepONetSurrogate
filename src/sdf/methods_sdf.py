@@ -3,43 +3,30 @@ import numpy as np
 class MethodsSDF:
 
     def sphere_formation_sdf(self, coords_df, params_df):
-        """Compute signed distance to a sphere.
 
-        Parameters
-        ----------
-        coords_df : array_like, shape (N, 3)
-            Cartesian coordinates of the points.
-        params_df : array_like, shape (N, P)
-            Parameters describing the sphere. Accepted forms are:
-            - ``P == 1``: sphere radius, centre assumed at the origin.
-            - ``P == 2``: x and y coordinates of the centre, z is assumed 0 and
-              radius is 1.
-            - ``P >= 4``: first three columns are centre coordinates, fourth is
-              the radius.
-        Returns
-        -------
-        np.ndarray, shape (N, 1)
-            Signed distance of each point to the sphere surface.
-        """
+        # Convert to numpy arrays
+        coords = np.asarray(coords_df, dtype=float)  # (N, 3)
+        params = np.asarray(params_df, dtype=float)  # shape (N, 2), same param repeated
 
-        coords = np.asarray(coords_df, dtype=float)
-        params = np.asarray(params_df, dtype=float)
+        # Ensure coords are 3D
+        if coords.shape[1] == 2:
+            coords = np.column_stack([coords, np.zeros(coords.shape[0])])  # add z=0
 
-        if params.ndim == 1:
-            params = params[:, None]
+        # Extract second sphere center from first row of params (assumes it's repeated)
+        center2 = np.append(params[0], 0.0)  # (x, y, 0)
+        
+        # Fixed sphere at origin
+        center1 = np.array([0.0, 0.0, 0.0])
+        
+        # Radii 
+        r1 = 1.0
+        r2 = 1.0
 
-        if params.shape[1] == 1:
-            centers = np.zeros((coords.shape[0], 3))
-            radii = params[:, 0]
-        elif params.shape[1] == 2:
-            centers = np.column_stack([params, np.zeros(params.shape[0])])
-            radii = np.ones(params.shape[0])
-        elif params.shape[1] >= 4:
-            centers = params[:, :3]
-            radii = params[:, 3]
-        else:
-            raise ValueError("params_df has an unsupported shape")
+        # Compute signed distances
+        sdf1 = np.linalg.norm(coords - center1, axis=1) - r1
+        sdf2 = np.linalg.norm(coords - center2, axis=1) - r2
 
-        distance = np.linalg.norm(coords - centers, axis=1) - radii
-
-        return distance[:, np.newaxis]
+        # Stack both SDFs: shape (N, 2)
+        sdf = np.stack([sdf1, sdf2], axis=1)
+        
+        return sdf

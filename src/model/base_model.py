@@ -14,7 +14,7 @@ class BaseModel(nn.Module):
 
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers)
 
-        input_dim = coord_dim+1   # include sdf value
+        input_dim = coord_dim + 2   # include sdf size (2 for two spheres)
         self.trunk_layers = nn.ModuleList([
             nn.Linear(input_dim if i == 0 else hidden_size, hidden_size)
             for i in range(num_hidden_layers)
