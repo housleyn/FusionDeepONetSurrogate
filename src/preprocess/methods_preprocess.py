@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from scipy.stats import qmc 
 from sklearn.neighbors import NearestNeighbors
-from src.sdf import SDF 
 
 class MethodsPreprocess:
     def load_and_pad(self):
@@ -11,24 +10,26 @@ class MethodsPreprocess:
             df = pd.read_csv(path)
             coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
             outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
+            sdf_full = df[[self.distance]].to_numpy()
             if self.dimension == 3:
-                coords, outputs = self.LHS(coords_full, outputs_full)
+                coords, outputs = self.LHS(coords_full, outputs_full, sdf_full)
                 self.lhs_applied = True
             else:
                 coords = coords_full
                 outputs = outputs_full
+                sdf = sdf_full
 
-            sdf_calculation = SDF()
+            
             param_vec = df[self.param_columns].to_numpy()
             if param_vec.shape[0] != coords.shape[0]:
                 param_vec = np.repeat(param_vec[:1], coords.shape[0], axis=0)
-            sdf_vec = sdf_calculation.sphere_formation_sdf(coords, param_vec)
+            
             # param_vec = self._reduce_params(param_vec)
 
             self.coords.append(coords)
             self.params.append(param_vec)
             self.outputs.append(outputs)
-            self.sdf.append(sdf_vec)
+            self.sdf.append(sdf)
             
 
         self.npts_max = max(c.shape[0] for c in self.coords)
@@ -64,7 +65,7 @@ class MethodsPreprocess:
             self.outputs[i] = outputs_flat[idx:idx+n]
             idx += n
 
-    def LHS(self, coords_full, outputs_full): 
+    def LHS(self, coords_full, outputs_full, sdf_full): 
         N_sample = self.lhs_sample
         coords_min = coords_full.min(axis=0)
         coords_max = coords_full.max(axis=0)
@@ -80,7 +81,8 @@ class MethodsPreprocess:
 
         coords = coords_full[indices]
         outputs = outputs_full[indices]
-        return coords, outputs
+        sdf = sdf_full[indices]
+        return coords, outputs, sdf
 
 
     def _pad(self, arr):

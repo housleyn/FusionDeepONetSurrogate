@@ -13,3 +13,4 @@ class BasePreprocess:
         self.dimension = dimension
         self.lhs_applied = False
         self.lhs_sample = lhs_sample
+        self.distance = "distanceToEllipse"
