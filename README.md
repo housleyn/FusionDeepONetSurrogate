@@ -28,7 +28,7 @@ step 2-train:
 step 3-infer:
     example_inference(file=example_file_coords_and_params.csv)
     or
-    example_infer_and_validate(file=example_file_with_validating_data.csv)
+    example_infer_and_validate(file=example_file_with_validating_data.csv, shape="ellipse")
 
 Step 1_instantiate: In this step you simply create an instance and call it what you would like. The Surrogate object takes in a yaml file. This file contains all the settings for the surrogate, an example and explanation will be shown below.
 

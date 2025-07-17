@@ -1,9 +1,10 @@
 import torch
 import os
 class BaseInference:
-    def __init__(self, project_name, model_path="src/model/fusion_deeponet.pt", stats_path="Data/processed_data.npz", param_columns=None):
+    def __init__(self, project_name, model_path="src/model/fusion_deeponet.pt", stats_path="Data/processed_data.npz", param_columns=None, distance_columns=None):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.param_columns = param_columns
+        self.distance_columns = distance_columns
         self.model = self._load_model(model_path, stats_path)
         self.stats = self._load_stats(stats_path)
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

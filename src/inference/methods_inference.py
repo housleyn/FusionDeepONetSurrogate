@@ -9,7 +9,7 @@ class MethodsInference:
     def _load_model(self, path, stats_path):
         with np.load(stats_path) as data:
             param_dim = data["params"].shape[1]
-        model = FusionDeepONet(coord_dim=3, param_dim=2, hidden_size=32, num_hidden_layers=3, out_dim=5)
+        model = FusionDeepONet(coord_dim=4, param_dim=2, hidden_size=32, num_hidden_layers=3, out_dim=5)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
@@ -28,14 +28,16 @@ class MethodsInference:
         df = pd.read_csv(csv_path)
         coords_np = df[["X (m)", "Y (m)", "Z (m)"]].values
         params_np = df[self.param_columns].values
-        return coords_np, params_np
+        sdf_np = df[self.distance_columns].values
+        return coords_np, params_np, sdf_np
     
-    def predict(self, coords_np, params):
+    def predict(self, coords_np, params, sdf):
         coords = torch.tensor(coords_np, dtype=torch.float32).unsqueeze(0).to(self.device)
         params = torch.tensor(params, dtype=torch.float32).unsqueeze(0).to(self.device)
+        sdf = torch.tensor(sdf, dtype=torch.float32).unsqueeze(0).to(self.device)
                
         with torch.no_grad():
-            pred = self.model(coords, params)
+            pred = self.model(coords, params, sdf)
         pred = self._denormalize(pred)
         return pred.squeeze(0).cpu().numpy()
     

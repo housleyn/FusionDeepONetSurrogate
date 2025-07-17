@@ -58,10 +58,10 @@ class MethodsSurrogate:
         plt.close()
 
     def _infer_and_validate(self, file, shape):
-        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
-        coords_np, params_np = inference.load_csv_input(file)
+        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
+        coords_np, params_np, sdf_np = inference.load_csv_input(file)
         params = params_np[1]
-        output = inference.predict(coords_np, params)
+        output = inference.predict(coords_np, params, sdf_np)
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
         print("Beginning postprocessing...")
@@ -69,8 +69,8 @@ class MethodsSurrogate:
         postprocess.run(self.dimension, shape)
     
     def _inference(self, file):
-        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns)
-        coords_np, params_np = inference.load_csv_input(file)
+        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
+        coords_np, params_np, sdf_np = inference.load_csv_input(file)
         params = params_np[1]
         output = inference.predict(coords_np, params)
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
