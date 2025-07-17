@@ -25,13 +25,19 @@ class BaseSurrogate:
         self.lhs_sample = config["lhs_sample"]
         self.lr = config["lr"]
 
-        self.npz_path = "Data/processed_data.npz"
-        self.output_path = "Data/processed_data.npz"
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
+
+        self.npz_path = os.path.join(
+            project_root, "Outputs", self.project_name, "processed_data.npz"
+        )
+        self.output_path = os.path.join(
+            project_root, "Outputs", self.project_name, "processed_data.npz"
+        )
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
+        
         self.predicted_output_file = os.path.join(
             project_root, "Outputs", self.project_name, "predicted_output.csv"
         )
