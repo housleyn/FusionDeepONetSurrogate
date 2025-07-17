@@ -28,7 +28,8 @@ class BaseSurrogate:
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
-
+        os.makedirs(os.path.join(project_root, "Outputs", self.project_name), exist_ok=True)
+        
         self.npz_path = os.path.join(
             project_root, "Outputs", self.project_name, "processed_data.npz"
         )

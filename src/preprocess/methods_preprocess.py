@@ -113,6 +113,7 @@ class MethodsPreprocess:
 
     def run_all(self):
         self.load_and_pad()
+        print("saving preprocessed data to", self.output_path)
         self.save()
 
     def _normalize(self, data):
