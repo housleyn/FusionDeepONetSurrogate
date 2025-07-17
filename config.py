@@ -20,7 +20,6 @@ config = {
     "param_columns": ["x", "y"],
     "lhs_sample": 500000,
     "data_folder": "Data/sphere_formation_data",
-    "inference_file": "Data/sphere_formation_data/sf0.csv"
 }
 
 os.makedirs("configs", exist_ok=True)

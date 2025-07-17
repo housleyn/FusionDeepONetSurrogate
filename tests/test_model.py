@@ -66,4 +66,23 @@ def test_repeatable_output(model):
 
     assert torch.allclose(out1, out2, atol=1e-5), "Outputs not repeatable with fixed seed"
 
+def test_trunk_receives_distance(monkeypatch):
+    model = FusionDeepONet(coord_dim=3 + 1, param_dim=2,
+                           hidden_size=64, num_hidden_layers=2, out_dim=5)
+
+    coords = torch.randn(2, 10, 3)
+    params = torch.randn(2, 2)
+    sdf = torch.randn(2, 10, 1)
+    captured = {}
+
+    def capture(x):
+        captured["input"] = x.detach().clone()
+        return torch.zeros(x.shape[0], x.shape[1], model.hidden_size)
+
+    monkeypatch.setattr(model.trunk_layers[0], "forward", capture)
+    model(coords, params, sdf)
+    expected = torch.cat((coords, sdf), dim=-1)
+    assert torch.allclose(captured["input"], expected)
+
+
 

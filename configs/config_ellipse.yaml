@@ -6,7 +6,6 @@ distance_columns:
 data_folder: Data/ellipse_data
 dimension: 2
 hidden_size: 32
-inference_file: Data/ellipse_data/ellipse_data_unseen2.csv
 lhs_sample: 500000
 num_epochs: 5
 num_hidden_layers: 3
