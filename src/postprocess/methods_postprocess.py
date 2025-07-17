@@ -125,6 +125,7 @@ class MethodsPostprocess:
         plt.savefig(os.path.join(error_dir, f"{safe_field}_comparison.png"))
         plt.close()
         print(f"Saved comparison plot for {field} to {error_dir}/{safe_field}_comparison.png")
+        
     def _plot_predicted_only(self, params):
         self._define_ouput_folders()
         fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",

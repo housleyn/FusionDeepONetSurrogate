@@ -4,7 +4,7 @@ from scipy.stats import qmc
 from sklearn.neighbors import NearestNeighbors
 
 class MethodsPreprocess:
-    def extract_data(self):
+    def load_data(self):
             for path in self.files:
                 df = pd.read_csv(path)
                 coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
@@ -31,8 +31,7 @@ class MethodsPreprocess:
 
     def load_and_pad(self):
         
-        self.extract_data()
-            
+        self.load_data()
 
         self.npts_max = max(c.shape[0] for c in self.coords)
         

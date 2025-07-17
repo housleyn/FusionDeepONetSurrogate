@@ -25,12 +25,6 @@ def test_initialization(tmp_path):
     assert data.sdf.shape == (4, 5, 1)
 
 
-
-
-
-
-
-
 def test_initialization_dtypes(tmp_path):
     npz = create_npz(tmp_path)
     data = Data(str(npz))
