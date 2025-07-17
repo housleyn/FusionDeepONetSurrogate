@@ -1,5 +1,5 @@
 class BasePreprocess:
-    def __init__(self, files, dimension, output_path, param_columns, lhs_sample=100):
+    def __init__(self, files, dimension, output_path, param_columns, distance_columns, lhs_sample=100):
 
 
         self.files = files
@@ -13,4 +13,4 @@ class BasePreprocess:
         self.dimension = dimension
         self.lhs_applied = False
         self.lhs_sample = lhs_sample
-        self.distance = "distanceToEllipse"
+        self.distance = distance_columns

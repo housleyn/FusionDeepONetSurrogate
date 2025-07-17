@@ -1,8 +1,7 @@
-from .base_model import BaseModel
-from .methods_model import MethodsModel 
+from .base_model import BaseModel 
 import torch
 
-class FusionDeepONet(BaseModel, MethodsModel):
+class FusionDeepONet(BaseModel):
 
     def forward(self, coords, params, sdf):
         # coords: (batch, n_pts, coord_dim)

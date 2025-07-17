@@ -1,5 +1,8 @@
 batch_size: 1
 coord_dim: 3
+distance_dim: 1
+distance_columns:
+- distanceToEllipse
 data_folder: Data/ellipse_data
 dimension: 2
 hidden_size: 32

@@ -18,7 +18,7 @@ class MethodsSurrogate:
         
     
     def _preprocess_data(self):
-        preprocess = Preprocess(files=self.files ,dimension=self.dimension, output_path=self.output_path, param_columns=self.param_columns, lhs_sample=self.lhs_sample)
+        preprocess = Preprocess(files=self.files ,dimension=self.dimension, output_path=self.output_path, param_columns=self.param_columns, distance_columns=self.distance_columns, lhs_sample=self.lhs_sample)
         preprocess.run_all()
         print("Data preprocessing complete.")
 
@@ -29,7 +29,7 @@ class MethodsSurrogate:
 
     def _create_model(self):
         self.model = FusionDeepONet(
-            coord_dim=self.coord_dim,
+            coord_dim=self.coord_dim + self.distance_dim,
             param_dim=self.param_dim,
             hidden_size=self.hidden_size,
             num_hidden_layers=self.num_hidden_layers,

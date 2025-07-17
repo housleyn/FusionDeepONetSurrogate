@@ -14,6 +14,8 @@ class BaseSurrogate:
         self.output_dim = config["output_dim"]
         self.test_size = config["test_size"]
         self.coord_dim = config["coord_dim"]
+        self.distance_dim = config["distance_dim"]
+        self.distance_columns = config["distance_columns"]
         self.param_dim = config["param_dim"]
         self.hidden_size = config["hidden_size"]
         self.num_hidden_layers = config["num_hidden_layers"]

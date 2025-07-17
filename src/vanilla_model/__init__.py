@@ -1,8 +1,8 @@
 import torch
 from .base_model import BaseModel
-from .methods_model import MethodsModel
 
-class VanillaDeepONet(BaseModel, MethodsModel):
+
+class VanillaDeepONet(BaseModel):
     def forward(self, coords, params):
         B, n_pts, _ = coords.shape
         H = self.hidden_size
