@@ -4,32 +4,34 @@ from scipy.stats import qmc
 from sklearn.neighbors import NearestNeighbors
 
 class MethodsPreprocess:
+    def extract_data(self):
+            for path in self.files:
+                df = pd.read_csv(path)
+                coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
+                outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
+                sdf_full = df[self.distance].to_numpy()
+                if self.dimension == 3:
+                    coords, outputs = self.LHS(coords_full, outputs_full, sdf_full)
+                    self.lhs_applied = True
+                else:
+                    coords = coords_full
+                    outputs = outputs_full
+                    sdf = sdf_full
+
+                
+                param_vec = df[self.param_columns].to_numpy()
+                if param_vec.shape[0] != coords.shape[0]:
+                    param_vec = np.repeat(param_vec[:1], coords.shape[0], axis=0)
+
+
+                self.coords.append(coords)
+                self.params.append(param_vec)
+                self.outputs.append(outputs)
+                self.sdf.append(sdf)
+
     def load_and_pad(self):
         
-        for path in self.files:
-            df = pd.read_csv(path)
-            coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
-            outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
-            sdf_full = df[self.distance].to_numpy()
-            if self.dimension == 3:
-                coords, outputs = self.LHS(coords_full, outputs_full, sdf_full)
-                self.lhs_applied = True
-            else:
-                coords = coords_full
-                outputs = outputs_full
-                sdf = sdf_full
-
-            
-            param_vec = df[self.param_columns].to_numpy()
-            if param_vec.shape[0] != coords.shape[0]:
-                param_vec = np.repeat(param_vec[:1], coords.shape[0], axis=0)
-            
-            # param_vec = self._reduce_params(param_vec)
-
-            self.coords.append(coords)
-            self.params.append(param_vec)
-            self.outputs.append(outputs)
-            self.sdf.append(sdf)
+        self.extract_data()
             
 
         self.npts_max = max(c.shape[0] for c in self.coords)
