@@ -33,5 +33,22 @@ def test_initialization_dtypes(tmp_path):
     assert data.params.dtype == torch.float32
     assert data.sdf.dtype == torch.float32
 
+def test_get_dataloader(tmp_path):
+    npz = create_npz(tmp_path)
+    data = Data(str(npz))
+    batch_size = 1
+    train_loader, test_loader = data.get_dataloader(batch_size=batch_size)
+
+    assert isinstance(train_loader, torch.utils.data.DataLoader)
+    assert isinstance(test_loader, torch.utils.data.DataLoader)
+    assert len(train_loader.dataset) == 3  # 80% of 4 samples
+    assert len(test_loader.dataset) == 1  # 20% of 4 samples
+
+    for batch in train_loader:
+        coords, params, outputs, sdf = batch
+        assert coords.shape == (batch_size, 5, 3)
+        assert params.shape == (batch_size, 1)
+        assert outputs.shape == (batch_size, 5, 5)
+        assert sdf.shape == (batch_size, 5, 1)
 
 
