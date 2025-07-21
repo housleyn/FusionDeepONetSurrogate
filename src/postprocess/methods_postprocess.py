@@ -9,7 +9,7 @@ class MethodsPostprocess:
         error = self._calculate_error()
         self._define_ouput_folders()
         fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)",
-                  "Absolute Pressure (Pa)", "Density (kg/m^3)"]
+                  "Absolute Pressure (Pa)", "Density (kg/m^3)", "Temperature (K)"]
         if dimension == 3:
             fields.insert(2, "Velocity[k] (m/s)")
 
@@ -129,7 +129,7 @@ class MethodsPostprocess:
     def _plot_predicted_only(self, params):
         self._define_ouput_folders()
         fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
-                  "Absolute Pressure (Pa)", "Density (kg/m^3)"]
+                  "Absolute Pressure (Pa)", "Density (kg/m^3)", "Temperature (K)"]
         for field in fields:
             self._plot_single_prediction(field, params)
 

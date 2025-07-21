@@ -8,7 +8,7 @@ class MethodsPreprocess:
             for path in self.files:
                 df = pd.read_csv(path)
                 coords_full = df[["X (m)", "Y (m)", "Z (m)"]].to_numpy()
-                outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)"]].to_numpy()
+                outputs_full = df[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)", "Absolute Pressure (Pa)", "Temperature (K)"]].to_numpy()
                 sdf_full = df[self.distance].to_numpy()
                 if self.dimension == 3:
                     coords, outputs = self.LHS(coords_full, outputs_full, sdf_full)

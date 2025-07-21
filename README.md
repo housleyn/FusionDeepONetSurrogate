@@ -9,6 +9,7 @@ Your CSV files used as training data must have columns with the following exact 
 "Velocity[j] (m/s)"
 "Velocity[k] (m/s)"
 "Absolute Pressure (Pa)"
+"Temperature (K)"
 
 Even if your simulation is only 2D, include a "Z (m)" column with all zeros. Your parameter column headers (either geometry or flow parameters) must follow a similar format:
 

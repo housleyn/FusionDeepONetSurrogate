@@ -65,7 +65,9 @@ class MethodsTrainer:
             coords = coords.to(self.device)
             coords.requires_grad_(True)
             params = params.to(self.device)
+            params.requires_grad_(True)
             targets = targets.to(self.device)
+            targets.requires_grad_(True)
             sdf = sdf.to(self.device)
 
             outputs = self.model(coords, params, sdf)

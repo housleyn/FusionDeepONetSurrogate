@@ -7,7 +7,7 @@ data_folder: Data/ellipse_data
 dimension: 2
 hidden_size: 32
 lhs_sample: 500000
-num_epochs: 1
+num_epochs: 5
 num_hidden_layers: 3
 output_dim: 6
 param_columns:
@@ -15,7 +15,7 @@ param_columns:
 - b
 param_dim: 2
 print_every: 1
-project_name: semi_ellipse_weighted_temp
+project_name: semi_ellipse_local
 shuffle: false
 test_size: 0.2
-lr: 0.0001
+lr: 0.001
