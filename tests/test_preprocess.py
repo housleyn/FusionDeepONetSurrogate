@@ -130,3 +130,19 @@ def test_save_creates_file(tmp_path, preprocess_instance2D):
 
     pre.save()
     assert os.path.exists(pre.output_path)
+
+def test_compute_weights_sets_some_to_5():
+    mp_inst = mp.MethodsPreprocess()
+    mask = np.array([False, True, False, True])
+    weights = mp_inst.compute_weights(mask)
+    assert np.array_equal(weights, np.array([1.0, 5.0, 1.0, 5.0]))
+
+
+def test_filter_high_gradient_marks_above_threshold():
+    mp_inst = mp.MethodsPreprocess()
+    grad = np.array([1e6, 1.1e7, 5e6, 2e7])
+    mask = mp_inst.filter_high_gradient(grad, threshold=1e7)
+    assert np.array_equal(mask, np.array([False, True, False, True]))
+
+
+

@@ -12,7 +12,7 @@ class MethodsTrainer:
             self.model.train()
             total_samples = 0
 
-            for coords, params, targets, sdf in train_loader:
+            for coords, params, targets, sdf, weights in train_loader:
                 coords = coords.to(self.device)
                 coords.requires_grad = True
                 params = params.to(self.device)
@@ -20,11 +20,14 @@ class MethodsTrainer:
                 targets = targets.to(self.device)
                 targets.requires_grad = True
                 sdf = sdf.to(self.device)
+                weights = weights.to(self.device)
 
                 self.optimizer.zero_grad()
                 outputs = self.model(coords, params, sdf)
-                loss = self.criterion(outputs, targets)
+                # loss = self.criterion(outputs, targets) these are to compare and switch between losses
+                loss = self.weighted_mse(outputs, targets, weights)
                 loss.backward()
+                
                 self.optimizer.step()
 
                 batch_size = targets.size(0)
@@ -62,14 +65,16 @@ class MethodsTrainer:
         total_loss = 0.0
         total_samples = 0
         with torch.no_grad():
-            for coords, params, targets, sdf in dataloader:
+            for coords, params, targets, sdf, weights in dataloader:
                 coords = coords.to(self.device)
                 params = params.to(self.device)
                 targets = targets.to(self.device)
                 sdf = sdf.to(self.device)
+                weights = weights.to(self.device)
 
                 outputs = self.model(coords, params, sdf)
-                loss = self.criterion(outputs, targets)
+                # loss = self.criterion(outputs, targets)
+                loss = self.weighted_mse(outputs, targets, weights)  # Uncomment if using weighted loss
                 batch_size = targets.size(0)
                 total_loss += loss.item() * batch_size
                 total_samples += batch_size
@@ -95,3 +100,6 @@ class MethodsTrainer:
         print(f"✅ Loaded checkpoint from epoch {checkpoint['epoch']}")
         return start_epoch
 
+    def weighted_mse(self, pred, target, weights):
+        weights = weights.unsqueeze(0).unsqueeze(-1)
+        return ((pred-target) ** 2 * weights).mean()
