@@ -23,7 +23,7 @@ class MethodsTrainer:
 
                 self.optimizer.zero_grad()
                 outputs = self.model(coords, params, sdf)
-                loss, _ = self.criterion(outputs, targets, coords, pressure_idx=self.pressure_idx)
+                loss = self.criterion(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
 
@@ -61,20 +61,18 @@ class MethodsTrainer:
         self.model.eval()
         total_loss = 0.0
         total_samples = 0
-        for coords, params, targets, sdf in dataloader:
-            coords = coords.to(self.device)
-            coords.requires_grad_(True)
-            params = params.to(self.device)
-            params.requires_grad_(True)
-            targets = targets.to(self.device)
-            targets.requires_grad_(True)
-            sdf = sdf.to(self.device)
+        with torch.no_grad():
+            for coords, params, targets, sdf in dataloader:
+                coords = coords.to(self.device)
+                params = params.to(self.device)
+                targets = targets.to(self.device)
+                sdf = sdf.to(self.device)
 
-            outputs = self.model(coords, params, sdf)
-            loss, _ = self.criterion(outputs, targets, coords, self.pressure_idx)
-            batch_size = targets.size(0)
-            total_loss += loss.item() * batch_size
-            total_samples += batch_size
+                outputs = self.model(coords, params, sdf)
+                loss = self.criterion(outputs, targets)
+                batch_size = targets.size(0)
+                total_loss += loss.item() * batch_size
+                total_samples += batch_size
 
         return total_loss / total_samples
 
