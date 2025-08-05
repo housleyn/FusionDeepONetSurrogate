@@ -38,7 +38,7 @@ class MethodsSurrogate:
         print("Model created with specified architecture.")
 
     def _train_model(self):
-        trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr)
+        trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma)
         self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
         trainer.save_model()
         self._plot_loss_history()
@@ -58,7 +58,7 @@ class MethodsSurrogate:
         plt.close()
 
     def _infer_and_validate(self, file, shape):
-        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
+        inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
         coords_np, params_np, sdf_np = inference.load_csv_input(file)
         params = params_np[1]
         output = inference.predict(coords_np, params, sdf_np)
@@ -69,7 +69,7 @@ class MethodsSurrogate:
         postprocess.run(self.dimension, shape)
     
     def _inference(self, file):
-        inference = Inference(self.project_name, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
+        inference = Inference(self.project_name,config_path=self.config_path, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
         coords_np, params_np, sdf_np = inference.load_csv_input(file)
         params = params_np[1]
         output = inference.predict(coords_np, params)

@@ -3,7 +3,7 @@ import os
 import yaml
 class BaseSurrogate:
     def __init__(self, config_path):
-        
+        self.config_path = config_path
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
         self.project_name = config["project_name"]
@@ -26,6 +26,7 @@ class BaseSurrogate:
         self.loss_history_file_name = "loss_history.png"
         self.lhs_sample = config["lhs_sample"]
         self.lr = config["lr"]
+        self.lr_gamma = config["lr_gamma"]
 
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -34,8 +34,8 @@ class MethodsTrainer:
                 epoch_loss += loss.item() * batch_size
                 total_samples += batch_size
 
-            # if (epoch + 1) % 20000 == 0:
-            #      self.lr_scheduler.step()
+            if (epoch + 1) % 10000 == 0:
+                 self.lr_scheduler.step()
             avg_loss = epoch_loss / total_samples
             loss_history.append(avg_loss)
 

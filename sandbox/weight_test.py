@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.tri as tri
 
 df = pd.read_csv('Data/ellipse_data/ellipse_data_test2.csv')
 

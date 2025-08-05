@@ -116,7 +116,7 @@ class MethodsPreprocess:
     
     def compute_weights(self, high_grad_mask):
         weights = np.ones_like(high_grad_mask, dtype=float)
-        weights[high_grad_mask] = 5  
+        weights[high_grad_mask] = 250  
         return weights
     
     def get_weights(self, x, y, absolute_pressure):
