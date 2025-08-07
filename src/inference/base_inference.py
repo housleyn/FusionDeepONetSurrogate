@@ -5,11 +5,13 @@ class BaseInference:
     def __init__(self, project_name, config_path ,model_path, stats_path="Data/processed_data.npz", param_columns=None, distance_columns=None):
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
-        self.coord_dim = config["coord_dim"] + 1 #accounts for distance to surface being added to trunk
+        self.coord_dim = config["coord_dim"] 
         self.param_dim = config["param_dim"]
         self.hidden_size = config["hidden_size"]
         self.num_hidden_layers = config["num_hidden_layers"]
         self.output_dim = config["output_dim"]
+        self.model_type = config["model_type"]
+        self.distance_dim = config["distance_dim"]
         
         
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

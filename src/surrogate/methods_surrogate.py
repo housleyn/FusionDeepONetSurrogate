@@ -1,4 +1,4 @@
-from src.models import FusionDeepONet
+from src.models.fusion_model import FusionDeepONet
 from src.models.vanilla_model import VanillaDeepONet
 from src.dataloader import Data
 from src.trainer import Trainer

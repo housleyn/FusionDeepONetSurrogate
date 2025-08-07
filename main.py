@@ -23,7 +23,7 @@ base_config = {
     "test_size": 0.2,
     "model_type": "vanilla",
     "loss_type": "mse",
-}
+} 
 
 # Parameter sweep choices
 hidden_sizes = [16, 32, 64]
@@ -64,3 +64,4 @@ if __name__ == "__main__":
 
     surrogate = Surrogate(config_path="configs/test.yaml")
     surrogate._train()
+    

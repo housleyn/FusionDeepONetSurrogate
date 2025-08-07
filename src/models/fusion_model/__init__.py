@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from .MLP import MLP
-from .activations import RowdyActivation
+from ..MLP import MLP
+from ..activations import RowdyActivation
 
 class FusionDeepONet(nn.Module):
     def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim):

@@ -1,5 +1,6 @@
 import torch
-from ..models import FusionDeepONet
+from ..models.fusion_model import FusionDeepONet
+from ..models.vanilla_model import VanillaDeepONet
 import csv
 import numpy as np 
 import pandas as pd
@@ -9,7 +10,10 @@ class MethodsInference:
     def _load_model(self, path, stats_path):
         with np.load(stats_path) as data:
             param_dim = data["params"].shape[1]
-        model = FusionDeepONet(coord_dim=self.coord_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim)
+        if self.model_type == "vanilla":
+            model = VanillaDeepONet(self.coord_dim, param_dim, self.hidden_size, self.num_hidden_layers, self.output_dim)
+        elif self.model_type == "FusionDeepONet":
+            model = FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
