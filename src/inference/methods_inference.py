@@ -1,5 +1,5 @@
 import torch
-from ..model import FusionDeepONet
+from ..models import FusionDeepONet
 import csv
 import numpy as np 
 import pandas as pd

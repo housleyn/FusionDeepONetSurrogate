@@ -21,6 +21,8 @@ base_config = {
     "print_every": 1,
     "shuffle": False,
     "test_size": 0.2,
+    "model_type": "vanilla",
+    "loss_type": "mse",
 }
 
 # Parameter sweep choices
@@ -60,5 +62,5 @@ if __name__ == "__main__":
     #     surrogate._train()
     
 
-    surrogate = Surrogate(config_path="configs/config_ellipse_7.yaml")
-    surrogate._infer_and_validate(file="Data/unseen_ellipse_data/ellipse_data_unseen2.csv", shape="ellipse")
+    surrogate = Surrogate(config_path="configs/test.yaml")
+    surrogate._train()

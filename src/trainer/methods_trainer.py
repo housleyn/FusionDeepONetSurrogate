@@ -24,8 +24,10 @@ class MethodsTrainer:
 
                 self.optimizer.zero_grad()
                 outputs = self.model(coords, params, sdf)
-                # loss = self.criterion(outputs, targets) these are to compare and switch between losses
-                loss = self.weighted_mse(outputs, targets, weights)
+                if self.loss_type == "mse":
+                    loss = self.criterion(outputs, targets)
+                elif self.loss_type == "weighted_mse":
+                    loss = self.weighted_mse(outputs, targets, weights)
                 loss.backward()
                 
                 self.optimizer.step()
@@ -73,8 +75,10 @@ class MethodsTrainer:
                 weights = weights.to(self.device)
 
                 outputs = self.model(coords, params, sdf)
-                # loss = self.criterion(outputs, targets)
-                loss = self.weighted_mse(outputs, targets, weights)  # Uncomment if using weighted loss
+                if self.loss_type == "mse":
+                    loss = self.criterion(outputs, targets)
+                elif self.loss_type == "weighted_mse":
+                    loss = self.weighted_mse(outputs, targets, weights)
                 batch_size = targets.size(0)
                 total_loss += loss.item() * batch_size
                 total_samples += batch_size

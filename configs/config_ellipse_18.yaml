@@ -7,8 +7,10 @@ distance_columns:
 distance_dim: 1
 hidden_size: 16
 lhs_sample: 500000
+loss_type: mse
 lr: 0.0003
 lr_gamma: 1.5
+model_type: vanilla
 num_epochs: 3
 num_hidden_layers: 7
 output_dim: 6

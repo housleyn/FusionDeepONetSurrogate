@@ -27,6 +27,8 @@ class BaseSurrogate:
         self.lhs_sample = config["lhs_sample"]
         self.lr = config["lr"]
         self.lr_gamma = config["lr_gamma"]
+        self.model_type = config["model_type"]
+        self.loss_type = config["loss_type"]
 
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

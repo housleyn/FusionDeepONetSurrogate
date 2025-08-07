@@ -2,8 +2,8 @@ import torch
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.model.MLP import MLP
-from src.model.activations import RowdyActivation
+from src.models.MLP import MLP
+from src.models.activations import RowdyActivation
 
 
 def test_rowdy_activation_forward():

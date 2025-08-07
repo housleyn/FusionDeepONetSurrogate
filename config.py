@@ -2,7 +2,7 @@ import os
 import yaml
 
 config = {
-    "project_name": "sphere_formation_sdf",
+    "project_name": "test",
     "lr": 1e-3,
     "batch_size": 36,
     "num_epochs": 5,
@@ -19,12 +19,14 @@ config = {
     "dimension": 2,
     "param_columns": ["x", "y"],
     "lhs_sample": 500000,
-    "data_folder": "Data/sphere_formation_data",
+    "data_folder": "Data/ellipse_data",
     "lr_gamma": 1.5,
+    "model_type": "vanilla",
+    "loss_type": "mse",
 }
 
 os.makedirs("configs", exist_ok=True)
-with open("configs/config_spheres_sdf.yaml", "w") as f:
+with open("configs/test.yaml", "w") as f:
     yaml.dump(config, f)
 
     #CAN ADD LOGIC HERE TO MAKE MULTIPLE CONFIGS ON TOP OF A BASE CONFIG

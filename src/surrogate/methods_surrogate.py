@@ -1,4 +1,5 @@
-from src.model import FusionDeepONet
+from src.models import FusionDeepONet
+from src.models.vanilla_model import VanillaDeepONet
 from src.dataloader import Data
 from src.trainer import Trainer
 from src.preprocess import Preprocess
@@ -28,17 +29,22 @@ class MethodsSurrogate:
         print("Data loaded in dataloader.")
 
     def _create_model(self):
-        self.model = FusionDeepONet(
-            coord_dim=self.coord_dim + self.distance_dim,
-            param_dim=self.param_dim,
-            hidden_size=self.hidden_size,
-            num_hidden_layers=self.num_hidden_layers,
-            out_dim=self.output_dim
-        )
-        print("Model created with specified architecture.")
+
+        if self.model_type == "vanilla":
+            print("Using Vanilla DeepONet model.")
+            self.model = VanillaDeepONet(self.coord_dim, self.param_dim, self.hidden_size, self.num_hidden_layers, self.output_dim)
+        if self.model_type == "FusionDeepONet":
+            print("Using Fusion DeepONet model.")
+            self.model = FusionDeepONet(
+                coord_dim=self.coord_dim + self.distance_dim,
+                param_dim=self.param_dim,
+                hidden_size=self.hidden_size,
+                num_hidden_layers=self.num_hidden_layers,
+                out_dim=self.output_dim
+            )
 
     def _train_model(self):
-        trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma)
+        trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
         self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
         trainer.save_model()
         self._plot_loss_history()

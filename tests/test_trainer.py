@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.trainer import Trainer
-from src.model import FusionDeepONet
+from src.models import FusionDeepONet
 
 
 def create_loaders():

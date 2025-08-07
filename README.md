@@ -44,3 +44,11 @@ The format of the infering and validating file should be exactly like the format
 
 config.py shows the format of a working file. Logic can be added here to create many config files to perform a sweep on parameters.
 
+Acceptable inputs for model_type:
+ -vanilla
+ -FusionDeepONet
+
+Acceptable inputs for loss_type:
+ -mse
+ -weighted_mse
+
