@@ -52,12 +52,13 @@ for i, (hidden_size, num_hidden_layers, lr, lr_gamma) in enumerate(sweep):
 
 
 if __name__ == "__main__":
-    
-    for i in range(30):
-        config_path = f"configs/config_ellipse_{i}.yaml"
-        print(f"Running job {i} with config: {config_path}")
-        surrogate = Surrogate(config_path=config_path)
-        surrogate._train()
+
+    # for i in range(30):
+    #     config_path = f"configs/config_ellipse_{i}.yaml"
+    #     print(f"Running job {i} with config: {config_path}")
+    #     surrogate = Surrogate(config_path=config_path)
+    #     surrogate._train()
     
 
-
+    surrogate = Surrogate(config_path="configs/config_ellipse_7.yaml")
+    surrogate._infer_and_validate(file="Data/unseen_ellipse_data/ellipse_data_unseen2.csv", shape="ellipse")
