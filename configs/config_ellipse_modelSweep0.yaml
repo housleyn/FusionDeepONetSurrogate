@@ -8,18 +8,17 @@ distance_dim: 1
 hidden_size: 32
 lhs_sample: 500000
 loss_type: weighted_mse
-lr: 0.001
-lr_gamma: 1.5
-model_type: FusionDeepONet
-num_epochs: 5
-num_hidden_layers: 3
+lr: 0.0001
+lr_gamma: 1.2
+model_type: vanilla
+num_epochs: 100000
+num_hidden_layers: 5
 output_dim: 6
 param_columns:
 - a
 - b
 param_dim: 2
 print_every: 1
-project_name: test
-shuffle: true
+project_name: modelSweep_0
+shuffle: false
 test_size: 0.2
-

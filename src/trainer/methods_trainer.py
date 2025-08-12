@@ -24,10 +24,11 @@ class MethodsTrainer:
 
                 self.optimizer.zero_grad()
                 outputs = self.model(coords, params, sdf)
-                if self.loss_type == "mse":
-                    loss = self.criterion(outputs, targets)
-                elif self.loss_type == "weighted_mse":
+                
+                if self.loss_type == "weighted_mse":
                     loss = self.weighted_mse(outputs, targets, weights)
+                elif self.loss_type == "mse":
+                    loss = self.criterion(outputs, targets)
                 loss.backward()
                 
                 self.optimizer.step()
