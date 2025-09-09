@@ -7,10 +7,10 @@ distance_columns:
 distance_dim: 1
 hidden_size: 32
 lhs_sample: 500000
-loss_type: weighted_mse
+loss_type: mse
 lr: 0.001
 lr_gamma: 1.5
-model_type: FusionDeepONet
+model_type: low_fi_fusion
 num_epochs: 5
 num_hidden_layers: 3
 output_dim: 6
