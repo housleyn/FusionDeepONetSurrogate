@@ -2,17 +2,22 @@ import torch
 import torch.nn as nn
 from ..MLP import MLP
 from ..activations import RowdyActivation
+import numpy as np
 
-class FusionDeepONet(nn.Module):
-    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim):
+class Low_Fidelity_FusionDeepONet(nn.Module):
+    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, npz_path):
         super().__init__()
         self.hidden_size = hidden_size
-        self.out_dim = out_dim
+        self.out_dim = out_dim 
+        
         self.num_hidden_layers = num_hidden_layers
+        self.outputs_mean = self._load_stats(npz_path)["outputs_mean"]
+        self.outputs_std = self._load_stats(npz_path)["outputs_std"]
+        
 
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers)
 
-        input_dim = coord_dim   
+        input_dim = coord_dim + 6 #coord_dim + distance_dim + free stream values (6)  
         self.trunk_layers = nn.ModuleList([
             nn.Linear(input_dim if i == 0 else hidden_size, hidden_size)
             for i in range(num_hidden_layers)
@@ -23,7 +28,18 @@ class FusionDeepONet(nn.Module):
         self.trunk_final = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, coords, params, sdf):
+
+        u_inf, v_inf, w_inf, p_inf, rho_inf, T_inf = -3430, 0.0, 0.0, 101325, 1.1075, 300
+        freeStreamValues = torch.tensor(
+            [u_inf, v_inf, w_inf, p_inf, rho_inf, T_inf], 
+            device=coords.device, 
+            dtype=coords.dtype
+        )
+        freeStreamValues = (freeStreamValues - self.outputs_mean) / self.outputs_std
+        freeStreamValues = freeStreamValues.expand(coords.shape[0], coords.shape[1], -1)
         
+        coords = torch.cat([coords, freeStreamValues], dim=-1)
+        x = torch.cat((coords, sdf), dim=-1)
 
         B, n_pts, _ = coords.shape #batch
         H = self.hidden_size #hidden
@@ -35,7 +51,7 @@ class FusionDeepONet(nn.Module):
         for i in range(1, self.num_hidden_layers): #trunk fusion forloop
             S.append(branch_hiddens[i] + S[-1])
 
-        x = torch.cat((coords, sdf), dim=-1) 
+         
         for i, (layer,act) in enumerate(zip(self.trunk_layers,self.trunk_activations)):
             x = act(layer(x))
 
@@ -53,3 +69,10 @@ class FusionDeepONet(nn.Module):
 
         out = torch.sum (ZL * YL, dim=-1)  # (B, N_pts, O)                                              dot product
         return out
+    
+    def _load_stats(self, npz_path):
+        data = np.load(npz_path)
+        return {
+            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
+            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
+        }

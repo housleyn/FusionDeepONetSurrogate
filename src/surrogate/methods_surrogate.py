@@ -1,5 +1,6 @@
 from src.models.fusion_model import FusionDeepONet
 from src.models.vanilla_model import VanillaDeepONet
+from src.models.low_fi_fusion_model import Low_Fidelity_FusionDeepONet
 from src.dataloader import Data
 from src.trainer import Trainer
 from src.preprocess import Preprocess
@@ -41,6 +42,16 @@ class MethodsSurrogate:
                 hidden_size=self.hidden_size,
                 num_hidden_layers=self.num_hidden_layers,
                 out_dim=self.output_dim
+            )
+        if self.model_type == "low_fi_fusion":
+            print("Using Low Fidelity Fusion DeepONet model.")
+            self.model = Low_Fidelity_FusionDeepONet(
+                coord_dim=self.coord_dim + self.distance_dim,
+                param_dim=self.param_dim,
+                hidden_size=self.hidden_size,
+                num_hidden_layers=self.num_hidden_layers,
+                out_dim=self.output_dim,
+                npz_path=self.npz_path
             )
 
     def _train_model(self):
