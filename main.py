@@ -53,13 +53,14 @@ for i, (model_type, loss_type) in enumerate(sweep):
 
 if __name__ == "__main__":
 
-    for i in range(4):
-        config_path = f"configs/config_ellipse_modelSweep{i}.yaml"
-        print(f"Running job {i} with config: {config_path}")
-        surrogate = Surrogate(config_path=config_path)
-        surrogate._train()
+    # for i in range(4):
+    #     config_path = f"configs/config_ellipse_modelSweep{i}.yaml"
+    #     print(f"Running job {i} with config: {config_path}")
+    #     surrogate = Surrogate(config_path=config_path)
+    #     surrogate._train()
 
-
+    surrogate = Surrogate(config_path="configs/test.yaml")
+    surrogate._train()
     
 
   
