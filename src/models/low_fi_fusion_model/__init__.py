@@ -35,7 +35,9 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
             device=coords.device, 
             dtype=coords.dtype
         )
-        freeStreamValues = (freeStreamValues - self.outputs_mean) / self.outputs_std
+        outputs_mean = self.outputs_mean.to(coords.device)
+        outputs_std = self.outputs_std.to(coords.device)
+        freeStreamValues = (freeStreamValues - outputs_mean) / outputs_std
         freeStreamValues = freeStreamValues.expand(coords.shape[0], coords.shape[1], -1)
         
         coords = torch.cat([coords, freeStreamValues], dim=-1)

@@ -23,7 +23,7 @@ class MethodsPostprocess:
             plot_func(field, error)
 
     def _calculate_error(self):
-        error = self.df_true - self.df_pred
+        error = np.abs(self.df_true - self.df_pred)
         error["X (m)"] = self.df_true["X (m)"]
         error["Y (m)"] = self.df_true["Y (m)"]
         return error
@@ -31,7 +31,7 @@ class MethodsPostprocess:
     def _calculate_relative_l2_error(self, field):
         u_true = self.df_true[field].values
         u_pred = self.df_pred[field].values
-        rel_l2 = 100 * np.linalg.norm(u_pred - u_true) / np.linalg.norm(u_true)
+        rel_l2 = 100 * np.linalg.norm(u_true-u_pred) / np.linalg.norm(u_true)
         self.errors[field] = rel_l2
 
     def _define_ouput_folders(self):
@@ -90,8 +90,8 @@ class MethodsPostprocess:
         datasets = [zi_pred, zi_true, zi_error]
         cmaps = ["inferno"] * 3
 
-        vmin_tp = np.nanmin([zi_true, zi_pred])
-        vmax_tp = np.nanmax([zi_true, zi_pred])
+        vmin_tp = np.nanmin([zi_true])
+        vmax_tp = np.nanmax([zi_true])
         ticks_tp = np.linspace(vmin_tp, vmax_tp, 9)
         tick_labels_tp = [f"{t:.3f}" for t in ticks_tp]
 

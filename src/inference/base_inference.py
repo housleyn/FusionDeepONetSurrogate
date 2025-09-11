@@ -2,7 +2,7 @@ import torch
 import os
 import yaml
 class BaseInference:
-    def __init__(self, project_name, config_path ,model_path, stats_path="Data/processed_data.npz", param_columns=None, distance_columns=None):
+    def __init__(self, project_name, config_path ,model_path, stats_path, param_columns=None, distance_columns=None):
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
         self.coord_dim = config["coord_dim"] 
@@ -17,6 +17,7 @@ class BaseInference:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.param_columns = param_columns
         self.distance_columns = distance_columns
+        self.npz_path = stats_path
         self.model = self._load_model(model_path, stats_path)
         self.stats = self._load_stats(stats_path)
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

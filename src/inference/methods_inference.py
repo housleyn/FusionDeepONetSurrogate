@@ -1,6 +1,7 @@
 import torch
 from ..models.fusion_model import FusionDeepONet
 from ..models.vanilla_model import VanillaDeepONet
+from ..models.low_fi_fusion_model import Low_Fidelity_FusionDeepONet
 import csv
 import numpy as np 
 import pandas as pd
@@ -14,6 +15,8 @@ class MethodsInference:
             model = VanillaDeepONet(self.coord_dim, param_dim, self.hidden_size, self.num_hidden_layers, self.output_dim)
         elif self.model_type == "FusionDeepONet":
             model = FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim)
+        elif self.model_type == "low_fi_fusion":
+            model = Low_Fidelity_FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.npz_path)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
@@ -43,6 +46,7 @@ class MethodsInference:
         with torch.no_grad():
             pred = self.model(coords, params, sdf)
         pred = self._denormalize(pred)
+        pred = self._add_freestream(pred)
         return pred.squeeze(0).cpu().numpy()
     
     def save_to_csv(self, coords_np, output_np, out_path=None):
@@ -71,3 +75,26 @@ class MethodsInference:
                 writer.writerow(row)
 
 
+    def _add_freestream(self, output):
+    
+        freestream_by_name = {
+            "Density (kg/m^3)":       1.1766728065550904,
+            "Velocity[i] (m/s)":      -3472.4454196563174,
+            "Velocity[j] (m/s)":      0.0,
+            "Velocity[k] (m/s)":      0.0,
+            "Absolute Pressure (Pa)": 101324.99849262246,
+            "Temperature (K)":        300.0,
+        }
+
+        output_columns = [
+            "Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)",
+            "Velocity[k] (m/s)", "Absolute Pressure (Pa)", "Temperature (K)"
+        ]
+
+        fs_vec = np.array([freestream_by_name[c] for c in output_columns], dtype=float)
+
+        if isinstance(output, torch.Tensor):
+            fs_vec = torch.tensor(fs_vec, dtype=output.dtype, device=output.device)
+            return output + fs_vec.view(1, -1)
+        else:
+            return output + fs_vec.reshape(1, -1)

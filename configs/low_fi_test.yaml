@@ -10,15 +10,15 @@ lhs_sample: 500000
 loss_type: mse
 lr: 0.001
 lr_gamma: 1.5
-model_type: low_fi_fusion
+model_type: FusionDeepONet
 num_epochs: 100000
 num_hidden_layers: 3
-output_dim: 5
+output_dim: 6
 param_columns:
-- x
-- y
+- a
+- b
 param_dim: 2
 print_every: 1
-project_name: low_fi_test
+project_name: low_fi_residual_unweighted_test
 shuffle: true
 test_size: 0.2
