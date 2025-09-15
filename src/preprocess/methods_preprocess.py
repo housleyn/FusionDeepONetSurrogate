@@ -70,7 +70,7 @@ class MethodsPreprocess:
             
         
         outputs_flat = np.vstack(self.outputs)
-        outputs_flat = self._subtract_free_stream(outputs_flat)
+        # outputs_flat = self._subtract_free_stream(outputs_flat)
         outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
 
         idx = 0
