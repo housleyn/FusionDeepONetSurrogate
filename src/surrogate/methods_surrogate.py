@@ -208,7 +208,7 @@ class MethodsSurrogate:
             coords=cat(all_coords),
             params=cat(all_params),
             sdf=cat(all_sdf),
-            targets_residual=cat(all_residual),
+            outputs=cat(all_residual),
             aux_lf_pointwise=cat(all_uLF),
             targets_highfi=cat(all_uHF),      # optional: keep HF too
         )

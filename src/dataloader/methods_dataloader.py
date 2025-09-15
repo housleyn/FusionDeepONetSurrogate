@@ -1,28 +1,23 @@
 import torch 
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader
 from sklearn.model_selection import train_test_split
 
 class MethodsDataloader:
 
     def get_dataloader(self, batch_size, shuffle=True, test_size=.2):
-        coords = self.coords
-        outputs = self.outputs
-        params = self.params
-        sdf = self.sdf
-        # weights = self.weights
+        coords, outputs, params, sdf = self.coords, self.outputs, self.params, self.sdf
+        aux = self.aux_lf  if hasattr(self, "aux_lf") else None
 
-        indices = np.arange(coords.shape[0])
-        train_indices, test_indices = train_test_split(indices, test_size=test_size, shuffle=shuffle, random_state=42)
+        idx = np.arange(coords.shape[0])
+        tri, tei = train_test_split(idx, test_size=test_size, shuffle=shuffle, random_state=42)
 
-        train_dataset = torch.utils.data.TensorDataset(
-            coords[train_indices], params[train_indices], outputs[train_indices], sdf[train_indices]#, weights[train_indices]
-        )
-        test_dataset = torch.utils.data.TensorDataset(
-            coords[test_indices], params[test_indices], outputs[test_indices], sdf[test_indices]#, weights[test_indices]
-        )
+        def make_ds(I):
+            if aux is None:
+                return TensorDataset(coords[I], params[I], outputs[I], sdf[I])
+            else:
+                return TensorDataset(coords[I], params[I], outputs[I], sdf[I], aux[I])
 
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
+        train_loader = DataLoader(make_ds(tri), batch_size=batch_size, shuffle=shuffle)
+        test_loader  = DataLoader(make_ds(tei), batch_size=batch_size, shuffle=False)
         return train_loader, test_loader

@@ -12,7 +12,7 @@ class MethodsTrainer:
             self.model.train()
             total_samples = 0
 
-            for coords, params, targets, sdf in train_loader:
+            for coords, params, targets, sdf, *maybe_aux in train_loader:
                 coords = coords.to(self.device)
                 coords.requires_grad = True
                 params = params.to(self.device)
@@ -20,10 +20,11 @@ class MethodsTrainer:
                 targets = targets.to(self.device)
                 targets.requires_grad = True
                 sdf = sdf.to(self.device)
+                aux = maybe_aux[0].to(self.device) if len(maybe_aux) else None
                 # weights = weights.to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(coords, params, sdf)
+                outputs = self.model(coords, params, sdf, aux=aux)
                 
                 # if self.loss_type == "weighted_mse":
                 #     loss = self.weighted_mse(outputs, targets)
@@ -68,13 +69,14 @@ class MethodsTrainer:
         total_loss = 0.0
         total_samples = 0
         with torch.no_grad():
-            for coords, params, targets, sdf in dataloader:
+            for coords, params, targets, sdf, *maybe_aux in dataloader:
                 coords = coords.to(self.device)
                 params = params.to(self.device)
                 targets = targets.to(self.device)
                 sdf = sdf.to(self.device)
+                aux = maybe_aux[0].to(self.device) if len(maybe_aux) else None
 
-                outputs = self.model(coords, params, sdf)
+                outputs = self.model(coords, params, sdf, aux=aux)
                 if self.loss_type == "mse":
                     loss = self.criterion(outputs, targets)
                 # elif self.loss_type == "weighted_mse":
