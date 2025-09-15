@@ -85,10 +85,13 @@ class MethodsTrainer:
 
         return total_loss / total_samples
 
-    def save_model(self, path=None):
+    def save_model(self, path=None, low_fi=False):
         if path is None:
             os.makedirs(f'Outputs/{self.project_name}/model', exist_ok=True)
-            path = f'Outputs/{self.project_name}/model/fusion_deeponet.pt'
+            if low_fi:
+                path = f'Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt'
+            else:
+                path = f'Outputs/{self.project_name}/model/fusion_deeponet.pt'
         torch.save(self.model.state_dict(), path)
 
     def load_model(self, path):

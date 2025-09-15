@@ -4,7 +4,7 @@ from ..MLP import MLP
 from ..activations import RowdyActivation
 
 class FusionDeepONet(nn.Module):
-    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim):
+    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, aux_dim=0):
         super().__init__()
         self.hidden_size = hidden_size
         self.out_dim = out_dim
@@ -12,7 +12,7 @@ class FusionDeepONet(nn.Module):
 
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers)
 
-        input_dim = coord_dim   
+        input_dim = coord_dim + aux_dim   
         self.trunk_layers = nn.ModuleList([
             nn.Linear(input_dim if i == 0 else hidden_size, hidden_size)
             for i in range(num_hidden_layers)
@@ -22,7 +22,7 @@ class FusionDeepONet(nn.Module):
         ])
         self.trunk_final = nn.Linear(hidden_size, hidden_size)
 
-    def forward(self, coords, params, sdf):
+    def forward(self, coords, params, sdf, aux=None):
         
 
         B, n_pts, _ = coords.shape #batch
@@ -35,7 +35,8 @@ class FusionDeepONet(nn.Module):
         for i in range(1, self.num_hidden_layers): #trunk fusion forloop
             S.append(branch_hiddens[i] + S[-1])
 
-        x = torch.cat((coords, sdf), dim=-1) 
+        x = torch.cat((coords, sdf), dim=-1) if aux is None else torch.cat((coords, sdf, aux), dim=-1)
+
         for i, (layer,act) in enumerate(zip(self.trunk_layers,self.trunk_activations)):
             x = act(layer(x))
 

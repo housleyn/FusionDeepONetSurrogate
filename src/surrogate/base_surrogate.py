@@ -32,23 +32,26 @@ class BaseSurrogate:
         self.model_type = config["model_type"]
         self.loss_type = config["loss_type"]
 
-        project_root = os.path.dirname(
+        self.project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
-        os.makedirs(os.path.join(project_root, "Outputs", self.project_name), exist_ok=True)
-        
+        os.makedirs(os.path.join(self.project_root, "Outputs", self.project_name), exist_ok=True)
+
         self.npz_path = os.path.join(
-            project_root, "Outputs", self.project_name, "processed_data.npz"
+            self.project_root, "Outputs", self.project_name, "processed_data.npz"
         )
         self.output_path = os.path.join(
-            project_root, "Outputs", self.project_name, "processed_data.npz"
+            self.project_root, "Outputs", self.project_name, "processed_data.npz"
         )
         self.low_fi_output_path = os.path.join(
-            project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
+            self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
         )
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        if self.model_type == "low_fi_fusion":
+            self.low_fi_model_path = f"Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
         
         self.predicted_output_file = os.path.join(
-            project_root, "Outputs", self.project_name, "predicted_output.csv"
+            self.project_root, "Outputs", self.project_name, "predicted_output.csv"
         )
+        
