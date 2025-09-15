@@ -157,6 +157,10 @@ class MethodsPreprocess:
         self.load_and_pad()
         print("saving preprocessed data to", self.output_path)
         self.save()
+    def run_all_low_fi(self):
+        self.load_and_pad()
+        print("saving preprocessed low fidelity data to", self.output_path)
+        self.save()
 
     def _normalize(self, data):
         mean = np.mean(data, axis=0)

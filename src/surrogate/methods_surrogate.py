@@ -22,11 +22,16 @@ class MethodsSurrogate:
     def _preprocess_data(self):
         preprocess = Preprocess(files=self.files ,dimension=self.dimension, output_path=self.output_path, param_columns=self.param_columns, distance_columns=self.distance_columns, lhs_sample=self.lhs_sample)
         preprocess.run_all()
+        if self.model_type == "low_fi_fusion":
+            preprocess_low_fi = Preprocess(files=self.low_fi_files ,dimension=self.dimension, output_path=self.low_fi_output_path, param_columns=self.param_columns, distance_columns=self.distance_columns, lhs_sample=self.lhs_sample)
+            preprocess_low_fi.run_all()
         print("Data preprocessing complete.")
 
     def _load_data(self):
         data = Data(self.npz_path)
+        data_low_fi = Data(self.low_fi_output_path) if self.low_fi_output_path else None
         self.train_loader, self.test_loader = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+        self.train_loader_low_fi, self.test_loader_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size) if data_low_fi else (None, None)
         print("Data loaded in dataloader.")
 
     def _create_model(self):
@@ -55,11 +60,18 @@ class MethodsSurrogate:
             )
 
     def _train_model(self):
-        trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
-        self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
-        trainer.save_model()
-        self._plot_loss_history()
-        print("Training complete. Loss history and model saved.")
+        if self.model_type == "low_fi_fusion":
+            trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader_low_fi, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+            self.loss_history, self.test_loss_history = trainer.train(self.train_loader_low_fi, self.test_loader_low_fi, self.num_epochs, print_every=self.print_every)
+            trainer.save_model()
+            self._plot_loss_history()
+            print("Training complete. Loss history and model saved.")
+        else:
+            trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+            self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
+            trainer.save_model()
+            self._plot_loss_history()
+            print("Training complete. Loss history and model saved.")
     
     def _plot_loss_history(self):
         plt.semilogy(self.loss_history, label='Training Loss')
@@ -99,4 +111,10 @@ class MethodsSurrogate:
         
     def _get_data_files(self):
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.data_folder))
+        return sorted(glob.glob(os.path.join(base_dir, "*.csv")))
+    
+    def _get_low_fi_data_files(self):
+        if self.low_fi_data_folder is None:
+            return []
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.low_fi_data_folder))
         return sorted(glob.glob(os.path.join(base_dir, "*.csv")))

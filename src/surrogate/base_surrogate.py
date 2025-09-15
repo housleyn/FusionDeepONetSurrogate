@@ -8,7 +8,9 @@ class BaseSurrogate:
             config = yaml.safe_load(file)
         self.project_name = config["project_name"]
         self.data_folder = config["data_folder"]
+        self.low_fi_data_folder = config.get("low_fi_data_folder", None)
         self.files = self._get_data_files()
+        self.low_fi_files = self._get_low_fi_data_files() if self.low_fi_data_folder else None
         self.batch_size = config["batch_size"]
         self.num_epochs = config["num_epochs"]
         self.output_dim = config["output_dim"]
@@ -40,6 +42,9 @@ class BaseSurrogate:
         )
         self.output_path = os.path.join(
             project_root, "Outputs", self.project_name, "processed_data.npz"
+        )
+        self.low_fi_output_path = os.path.join(
+            project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
         )
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
