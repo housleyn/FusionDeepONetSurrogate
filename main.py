@@ -59,11 +59,11 @@ if __name__ == "__main__":
     #     surrogate = Surrogate(config_path=config_path)
     #     surrogate._train()
 
-    surrogate = Surrogate(config_path="configs/config_ellipse_4.yaml")
-    surrogate_2 = Surrogate(config_path="configs/low_fi_test.yaml")
-    # surrogate._train()
+    surrogate = Surrogate(config_path="configs/test.yaml")
+    
+    surrogate._train()
     # surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv", shape="ellipse")
-    surrogate_2._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv", shape="ellipse")
+    
     
 
   

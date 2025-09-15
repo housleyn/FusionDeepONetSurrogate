@@ -18,7 +18,7 @@ class MethodsPreprocess:
                     self.lhs_applied = True
                     
                 else:
-                    weights = self.get_weights(coords_full[:, 0], coords_full[:, 1], outputs_full[:, 3])
+                    # weights = self.get_weights(coords_full[:, 0], coords_full[:, 1], outputs_full[:, 3])
                     coords = coords_full
                     outputs = outputs_full
                     sdf = sdf_full
@@ -33,7 +33,7 @@ class MethodsPreprocess:
                 self.params.append(param_vec)
                 self.outputs.append(outputs)
                 self.sdf.append(sdf)
-                self.weights.append(weights)
+                # self.weights.append(weights)
 
 
     def load_and_pad(self):
@@ -48,22 +48,22 @@ class MethodsPreprocess:
             padded_params = []
             padded_outputs = []
             padded_sdf = []
-            padded_weights = []
-            for c, r, o, s, w in zip(self.coords, self.params, self.outputs, self.sdf, self.weights):
+            # padded_weights = []
+            for c, r, o, s in zip(self.coords, self.params, self.outputs, self.sdf):
                 c_pad = self._pad(c)
                 r_pad = self._pad(r)
                 o_pad = self._pad(o)
                 s_pad = self._pad(s)
-                w_pad = np.pad(w, (0,self.npts_max-w.shape[0]), mode="edge")
+                # w_pad = np.pad(w, (0,self.npts_max-w.shape[0]), mode="edge")
                 padded_coords.append(c_pad)
                 padded_params.append(r_pad)
                 padded_outputs.append(o_pad)
                 padded_sdf.append(s_pad)
-                padded_weights.append(w_pad)
+                # padded_weights.append(w_pad)
 
 
             self.sdf = padded_sdf
-            self.weights = padded_weights
+            # self.weights = padded_weights
             self.coords = padded_coords
             self.params = padded_params
             self.outputs = padded_outputs
@@ -147,7 +147,7 @@ class MethodsPreprocess:
             outputs=Y_outputs,         # shape: (num_samples, npts_max, output_dim)
             params=G_params,           # shape: (num_samples, param_dim)
             sdf=S_sdf,              # shape: (num_samples, npts_max, 1)
-            weights=self.weights,       # shape: (num_samples, npts_max, 1)
+            # weights=self.weights,       # shape: (num_samples, npts_max, 1)
             outputs_mean=self.outputs_mean,   # shape: (output_dim,)
             outputs_std=self.outputs_std,     # shape: (output_dim,)
 

@@ -10,16 +10,16 @@ class MethodsDataloader:
         outputs = self.outputs
         params = self.params
         sdf = self.sdf
-        weights = self.weights
+        # weights = self.weights
 
         indices = np.arange(coords.shape[0])
         train_indices, test_indices = train_test_split(indices, test_size=test_size, shuffle=shuffle, random_state=42)
 
         train_dataset = torch.utils.data.TensorDataset(
-            coords[train_indices], params[train_indices], outputs[train_indices], sdf[train_indices], weights[train_indices]
+            coords[train_indices], params[train_indices], outputs[train_indices], sdf[train_indices]#, weights[train_indices]
         )
         test_dataset = torch.utils.data.TensorDataset(
-            coords[test_indices], params[test_indices], outputs[test_indices], sdf[test_indices], weights[test_indices]
+            coords[test_indices], params[test_indices], outputs[test_indices], sdf[test_indices]#, weights[test_indices]
         )
 
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)

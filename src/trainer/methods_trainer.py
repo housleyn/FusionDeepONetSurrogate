@@ -12,7 +12,7 @@ class MethodsTrainer:
             self.model.train()
             total_samples = 0
 
-            for coords, params, targets, sdf, weights in train_loader:
+            for coords, params, targets, sdf in train_loader:
                 coords = coords.to(self.device)
                 coords.requires_grad = True
                 params = params.to(self.device)
@@ -20,15 +20,15 @@ class MethodsTrainer:
                 targets = targets.to(self.device)
                 targets.requires_grad = True
                 sdf = sdf.to(self.device)
-                weights = weights.to(self.device)
+                # weights = weights.to(self.device)
 
                 self.optimizer.zero_grad()
                 outputs = self.model(coords, params, sdf)
                 
-                if self.loss_type == "weighted_mse":
-                    loss = self.weighted_mse(outputs, targets, weights)
-                elif self.loss_type == "mse":
-                    loss = self.criterion(outputs, targets)
+                # if self.loss_type == "weighted_mse":
+                #     loss = self.weighted_mse(outputs, targets)
+                # elif self.loss_type == "mse":
+                loss = self.criterion(outputs, targets)
                 loss.backward()
                 
                 self.optimizer.step()
@@ -68,18 +68,17 @@ class MethodsTrainer:
         total_loss = 0.0
         total_samples = 0
         with torch.no_grad():
-            for coords, params, targets, sdf, weights in dataloader:
+            for coords, params, targets, sdf in dataloader:
                 coords = coords.to(self.device)
                 params = params.to(self.device)
                 targets = targets.to(self.device)
                 sdf = sdf.to(self.device)
-                weights = weights.to(self.device)
 
                 outputs = self.model(coords, params, sdf)
                 if self.loss_type == "mse":
                     loss = self.criterion(outputs, targets)
-                elif self.loss_type == "weighted_mse":
-                    loss = self.weighted_mse(outputs, targets, weights)
+                # elif self.loss_type == "weighted_mse":
+                #     loss = self.weighted_mse(outputs, targets)
                 batch_size = targets.size(0)
                 total_loss += loss.item() * batch_size
                 total_samples += batch_size
