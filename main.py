@@ -62,7 +62,7 @@ if __name__ == "__main__":
     surrogate = Surrogate(config_path="configs/test.yaml")
     
     surrogate._train()
-    # surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv", shape="ellipse")
+    surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv", shape="ellipse")
     
     
 

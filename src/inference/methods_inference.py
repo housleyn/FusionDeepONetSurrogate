@@ -16,7 +16,13 @@ class MethodsInference:
         elif self.model_type == "FusionDeepONet":
             model = FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim)
         elif self.model_type == "low_fi_fusion":
-            model = Low_Fidelity_FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.npz_path)
+            model_1 = Low_Fidelity_FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.npz_path)
+            model_1.load_state_dict(torch.load(self.low_fi_model_path, map_location=self.device))
+            model_1.eval()
+            model_2 = FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, aux_dim=self.output_dim)
+            model_2.load_state_dict(torch.load(path, map_location=self.device))
+            model_2.eval()
+            return model_1, model_2
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
@@ -42,11 +48,17 @@ class MethodsInference:
         coords = torch.tensor(coords_np, dtype=torch.float32).unsqueeze(0).to(self.device)
         params = torch.tensor(params, dtype=torch.float32).unsqueeze(0).to(self.device)
         sdf = torch.tensor(sdf, dtype=torch.float32).unsqueeze(0).to(self.device)
-               
-        with torch.no_grad():
-            pred = self.model(coords, params, sdf)
+        if self.model_type == "low_fi_fusion":
+            with torch.no_grad():
+                low_fi_pred = self.model_1(coords, params, sdf)
+                
+                pred = self.model_2(coords, params, sdf, aux=low_fi_pred)
+                
+        else:
+            with torch.no_grad():
+                pred = self.model(coords, params, sdf)
         pred = self._denormalize(pred)
-        pred = self._add_freestream(pred)
+        # pred = self._add_freestream(pred)
         return pred.squeeze(0).cpu().numpy()
     
     def save_to_csv(self, coords_np, output_np, out_path=None):

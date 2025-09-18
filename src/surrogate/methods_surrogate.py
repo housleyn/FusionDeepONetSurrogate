@@ -52,13 +52,14 @@ class MethodsSurrogate:
             )
         if self.model_type == "low_fi_fusion":
             print("Using Low Fidelity Fusion DeepONet model.")
+            print(f"coord_dim={self.coord_dim + self.distance_dim}")
             self.model = Low_Fidelity_FusionDeepONet(
                 coord_dim=self.coord_dim + self.distance_dim,
                 param_dim=self.param_dim,
                 hidden_size=self.hidden_size,
                 num_hidden_layers=self.num_hidden_layers,
                 out_dim=self.output_dim,
-                npz_path=self.npz_path
+                npz_path=self.low_fi_output_path
             )
 
     def _train_model(self):
@@ -96,10 +97,11 @@ class MethodsSurrogate:
             print("Training complete. Loss history and model saved.")
     
     def _plot_loss_history(self, low_fidelity=False):
-        plt.semilogy(self.loss_history, label='Training Loss')
-        plt.semilogy(self.test_loss_history, label='Testing Loss')
+        plt.plot(self.loss_history, label='Training Loss')
+        plt.plot(self.test_loss_history, label='Testing Loss')
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
+        plt.yscale("log")
         if low_fidelity:
             self.loss_history_file_name = "loss_history_low_fidelity.png"
             plt.title("Low Fidelity Training and Testing Loss History")
@@ -114,7 +116,13 @@ class MethodsSurrogate:
         plt.close()
 
     def _infer_and_validate(self, file, shape):
-        inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
+        if self.model_type == "low_fi_fusion":
+            stats_path = os.path.join(
+            self.project_root, "Outputs", self.project_name, "processed_data.npz"
+            )
+        else:
+            stats_path = self.npz_path
+        inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=stats_path, param_columns=self.param_columns, distance_columns=self.distance_columns, low_fi_model_path=self.low_fi_model_path if self.model_type=="low_fi_fusion" else None)
         coords_np, params_np, sdf_np = inference.load_csv_input(file)
         params = params_np[1]
         output = inference.predict(coords_np, params, sdf_np)
