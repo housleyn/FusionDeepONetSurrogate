@@ -56,13 +56,15 @@ class MethodsInference:
                 
                 pred = self.model_2(coords, params, sdf, aux=low_fi_pred) 
 
-                pred = self._denormalize(pred) + self._low_fi_denormalize(low_fi_pred)
+                pred = pred + self._low_fi_denormalize(low_fi_pred)
+
+                
 
         else:
             with torch.no_grad():
                 pred = self.model(coords, params, sdf)
-        pred = self._denormalize(pred)
-        # pred = self._add_freestream(pred)
+            pred = self._denormalize(pred)
+        
         return pred.squeeze(0).cpu().numpy()
     
     def save_to_csv(self, coords_np, output_np, out_path=None):
