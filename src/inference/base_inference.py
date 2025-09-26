@@ -2,7 +2,7 @@ import torch
 import os
 import yaml
 class BaseInference:
-    def __init__(self, project_name, config_path ,model_path, stats_path, param_columns=None, distance_columns=None, low_fi_model_path=None):
+    def __init__(self, project_name, config_path ,model_path, stats_path, low_fi_stats_path=None, param_columns=None, distance_columns=None, low_fi_model_path=None):
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
         self.coord_dim = config["coord_dim"] 
@@ -22,6 +22,7 @@ class BaseInference:
         if self.model_type == "low_fi_fusion":
             # Load both LF and HF models in a single call where `path` points to the HF checkpoint.
             # `_load_model` will internally use `self.low_fi_model_path` for the LF model and `path` for the HF model.
+
             model_path = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                 "Outputs", project_name, "model", "fusion_deeponet.pt"
@@ -29,6 +30,7 @@ class BaseInference:
             self.model_1, self.model_2 = self._load_model(model_path, stats_path)
         else:
             self.model = self._load_model(model_path, stats_path)
+        self.low_fi_stats = self._load_stats(low_fi_stats_path) if low_fi_stats_path else None
         self.stats = self._load_stats(stats_path)
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         outputs_dir = os.path.join(project_root, "Outputs")

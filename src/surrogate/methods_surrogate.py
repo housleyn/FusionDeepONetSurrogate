@@ -118,11 +118,15 @@ class MethodsSurrogate:
     def _infer_and_validate(self, file, shape):
         if self.model_type == "low_fi_fusion":
             stats_path = os.path.join(
-            self.project_root, "Outputs", self.project_name, "processed_data.npz"
+            self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
             )
+            low_fi_stats_path = os.path.join(
+                self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
+            )
+            inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=stats_path, low_fi_stats_path=low_fi_stats_path, param_columns=self.param_columns, distance_columns=self.distance_columns, low_fi_model_path=self.low_fi_model_path if self.model_type=="low_fi_fusion" else None)
         else:
             stats_path = self.npz_path
-        inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=stats_path, param_columns=self.param_columns, distance_columns=self.distance_columns, low_fi_model_path=self.low_fi_model_path if self.model_type=="low_fi_fusion" else None)
+            inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=stats_path, param_columns=self.param_columns, distance_columns=self.distance_columns, low_fi_model_path=self.low_fi_model_path if self.model_type=="low_fi_fusion" else None)
         coords_np, params_np, sdf_np = inference.load_csv_input(file)
         params = params_np[1]
         output = inference.predict(coords_np, params, sdf_np)

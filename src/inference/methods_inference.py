@@ -36,6 +36,8 @@ class MethodsInference:
 
     def _denormalize(self, output):
         return output * self.stats["outputs_std"] + self.stats["outputs_mean"]
+    def _low_fi_denormalize(self, output):
+        return output * self.low_fi_stats["outputs_std"] + self.low_fi_stats["outputs_mean"]
 
     def load_csv_input(self, csv_path):
         df = pd.read_csv(csv_path)
@@ -52,8 +54,10 @@ class MethodsInference:
             with torch.no_grad():
                 low_fi_pred = self.model_1(coords, params, sdf)
                 
-                pred = self.model_2(coords, params, sdf, aux=low_fi_pred)
-                
+                pred = self.model_2(coords, params, sdf, aux=low_fi_pred) 
+
+                pred = self._denormalize(pred) + self._low_fi_denormalize(low_fi_pred)
+
         else:
             with torch.no_grad():
                 pred = self.model(coords, params, sdf)
