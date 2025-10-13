@@ -9,7 +9,7 @@ class MethodsPostprocess:
         error = self._calculate_error()
         self._define_ouput_folders()
         fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)",
-                  "Absolute Pressure (Pa)", "Density (kg/m^3)", "Temperature (K)"]
+                "Absolute Pressure (Pa)", "Density (kg/m^3)", "Temperature (K)"]
         if dimension == 3:
             fields.insert(2, "Velocity[k] (m/s)")
 
@@ -18,7 +18,15 @@ class MethodsPostprocess:
 
         self._create_table()
 
-        plot_func = self._plot_fields if shape == "ellipse" else self._plot_fields_spheres
+        # Fix the shape selection logic
+        if shape == "ellipse":
+            plot_func = self._plot_fields
+        elif shape == "spheres": 
+            plot_func = self._plot_fields_spheres
+        else:  # shape == "None" or any other value
+            # Use point cloud plotting (no interpolation, no masking)
+            plot_func = lambda field, error: self.plot_point_cloud(field, error)
+        
         for field in fields:
             plot_func(field, error)
 
@@ -80,7 +88,8 @@ class MethodsPostprocess:
             radius = 1.0
             mask = ((xi - x1)**2 + (yi - y1)**2 <= radius**2) | ((xi - x2)**2 + (yi - y2)**2 <= radius**2)
         else:
-            mask = np.zeros_like(xi, dtype=bool)
+            self.plot_point_cloud(field, error)
+            return
 
         for z in [zi_true, zi_pred, zi_error]:
             z[mask] = np.nan
@@ -160,3 +169,63 @@ class MethodsPostprocess:
         plt.savefig(os.path.join(pred_dir, f"{safe_field}_predicted.png"))
         plt.close()
         print(f"Saved predicted plot for {field} to {pred_dir}/{safe_field}_predicted.png")
+
+    def plot_point_cloud(self, field, error):
+        """
+        Plot field comparison using raw point data without interpolation
+        """
+        x = self.df_true["X (m)"].values
+        y = self.df_true["Y (m)"].values
+        
+        # Get field values
+        true_values = self.df_true[field].values
+        pred_values = self.df_pred[field].values
+        error_values = error[field].values
+        
+        # Create figure with 3 subplots
+        fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+        
+        # Data for each subplot
+        datasets = [pred_values, true_values, error_values]
+        titles = ["Predicted", "True", "Error"]
+        cmaps = ["inferno", "inferno", "inferno"]
+        
+        # Calculate consistent color scales
+        vmin_tp = min(np.min(true_values), np.min(pred_values))
+        vmax_tp = max(np.max(true_values), np.max(pred_values))
+        
+        vmin_err = np.min(error_values)
+        vmax_err = np.max(error_values)
+        
+        # Create scatter plots
+        for i, (ax, data, title, cmap) in enumerate(zip(axs, datasets, titles, cmaps)):
+            if title == "Error":
+                # Use error color scale
+                scatter = ax.scatter(x, y, c=data, cmap=cmap, s=1, 
+                                vmin=vmin_err, vmax=vmax_err)
+                cbar = fig.colorbar(scatter, ax=ax)
+                cbar.set_label("Error Color Scale")
+            else:
+                # Use true/predicted color scale
+                scatter = ax.scatter(x, y, c=data, cmap=cmap, s=1, 
+                                vmin=vmin_tp, vmax=vmax_tp)
+                cbar = fig.colorbar(scatter, ax=ax)
+                cbar.set_label(f"{field} Color Scale")
+            
+            cbar.ax.tick_params(labelsize=14)
+            ax.set_title(f"{field} - {title}")
+            ax.set_xlabel("X (m)")
+            ax.set_ylabel("Y (m)")
+            ax.set_aspect('equal')
+        
+        plt.tight_layout()
+        
+        # Save the plot
+        safe_field = field.replace(' ', '_').replace('[', '').replace(']', '')\
+                        .replace('(', '').replace(')', '').replace('/', '_')
+        error_dir = os.path.join(self.figures_dir, "error_figures")
+        os.makedirs(error_dir, exist_ok=True)
+        plt.savefig(os.path.join(error_dir, f"{safe_field}_pointcloud_comparison.png"), dpi=150)
+        plt.close()
+        print(f"Saved point cloud comparison plot for {field} to {error_dir}/{safe_field}_pointcloud_comparison.png")
+
