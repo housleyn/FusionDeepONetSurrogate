@@ -1,4 +1,3 @@
-
 from src.surrogate import Surrogate
 import os
 import yaml
@@ -6,65 +5,51 @@ import itertools
 import numpy as np
 
 base_config = {
-    "batch_size": 36,
     "coord_dim": 3,
     "distance_dim": 1,
-    "distance_columns": ["distanceToEllipse"],
-    "data_folder": "Data/ellipse_data",
+    "distance_columns": ["distanceToSurface"],
+    "data_folder": "Data/x_43_data_36",
+    "low_fi_data_folder": "Data/x_43_low_fi_data_36",
     "dimension": 2,
     "lhs_sample": 500000,
-    "num_epochs": 100000,
+    "num_epochs": 50000,
     "output_dim": 6,
-    "param_columns": ["a", "b"],
-    "param_dim": 2,
+    "param_columns": ["a2", "a3", "a4"],
+    "param_dim": 3,
     "print_every": 1,
-    "shuffle": False,
+    "shuffle": True,
     "test_size": 0.2,
-    "model_type": "FusionDeepONet",
-    "hidden_size": 32,
-    "num_hidden_layers": 5,
-    "lr": .0001,
-    "lr_gamma": 1.2,
-    
+    "model_type": "low_fi_fusion",
+    "loss_type": "mse",
 } 
 
-model_types = ["vanilla", "FusionDeepONet"]
-loss_types = ["mse", "weighted_mse"]
+hyperparams = {
+    "lr": [0.0001, 0.0005, 0.001, 0.005],
+    "lr_gamma": [0.8, 1.0, 1.2, 1.5],
+    "hidden_size": [16, 32, 64, 128],
+    "num_hidden_layers": [3, 4, 5, 6, 7, 8],
+    "batch_size": [8, 16, 32, 36]
+}
 
-# All combinations
-sweep = list(itertools.product(model_types, loss_types))
-np.random.seed(42)
-np.random.shuffle(sweep)  # Shuffle to avoid patterns
-sweep = sweep[:30]  # Select 30 combinations
+all_combinations = list(itertools.product(*hyperparams.values()))
+param_names = list(hyperparams.keys())
 
 os.makedirs("configs", exist_ok=True)
 
-for i, (model_type, loss_type) in enumerate(sweep):
+for i, combination in enumerate(all_combinations):
     config = base_config.copy()
-    config.update({
-        "project_name": f"modelSweep_{i}",
-        "model_type": model_type,
-        "loss_type": loss_type,
-    })
-    with open(f"configs/config_ellipse_modelSweep{i}.yaml", "w") as f:
+    
+    for param_name, param_value in zip(param_names, combination):
+        config[param_name] = param_value
+    
+    config["project_name"] = f"hyperparam_sweep_{i}"
+    
+    config_filename = f"configs/config_hyperparam_sweep_{i}.yaml"
+    with open(config_filename, "w") as f:
         yaml.dump(config, f)
 
-
-
 if __name__ == "__main__":
-
-    # for i in range(4):
-    #     config_path = f"configs/config_ellipse_modelSweep{i}.yaml"
-    #     print(f"Running job {i} with config: {config_path}")
-    #     surrogate = Surrogate(config_path=config_path)
-    #     surrogate._train()
-
-    surrogate = Surrogate(config_path="configs/test.yaml")
-    
-    # surrogate._train()
-    surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv", shape="None")
-    
-    
-
-  
-    
+    for i in range(len(all_combinations)):
+        config_path = f"configs/config_hyperparam_sweep_{i}.yaml"
+        
+        surrogate = Surrogate(config_path=config_path)
