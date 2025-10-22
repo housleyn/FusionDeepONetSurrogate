@@ -60,12 +60,13 @@ if __name__ == "__main__":
     #     surrogate = Surrogate(config_path=config_path)
     #     surrogate._train()
 
-    surrogate = Surrogate(config_path="configs/Vanilla.yaml")
-    surrogate._train()
+    # surrogate = Surrogate(config_path="configs/Vanilla.yaml")
+    # surrogate._train()
     # surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test3.csv", shape=None)
 
-    # surrogate = Surrogate(config_path="configs/double_hf_small.yaml")
-    # surrogate._infer_and_validate(file="Data/x_43_unseen/x_43_a23.563123125_a311.12131191_a48.365209003.csv", shape=None)
+    surrogate = Surrogate(config_path="configs/low_fi_test.yaml")
+    surrogate._train()
+    surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv", shape='ellipse')
     # surrogate._infer_and_validate(file="Data/x_43_unseen/x_43_a21.101756927_a324.59262374_a417.89264438.csv", shape=None)
     # surrogate._infer_and_validate(file="Data/x_43_data_36/x_43_a21.037862747_a320.23181912_a414.13846579.csv", shape=None)
     # surrogate._infer_and_validate(file="Data/x_43_low_fi_72/x_43_a21.8550107_a316.33293864_a410.25707196_low_fi.csv", shape=None)

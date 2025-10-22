@@ -38,6 +38,8 @@ class MethodsInference:
         return output * self.stats["outputs_std"] + self.stats["outputs_mean"]
     def _low_fi_denormalize(self, output):
         return output * self.low_fi_stats["outputs_std"] + self.low_fi_stats["outputs_mean"]
+    def _residual_denormalize(self, output):
+        return output * self.residual_stats["outputs_std"] + self.residual_stats["outputs_mean"]
 
     def load_csv_input(self, csv_path):
         df = pd.read_csv(csv_path)
@@ -54,11 +56,9 @@ class MethodsInference:
             with torch.no_grad():
                 low_fi_pred = self.model_1(coords, params, sdf)
                 
-                pred = self.model_2(coords, params, sdf, aux=low_fi_pred) 
+                residual_pred = self.model_2(coords, params, sdf, aux=low_fi_pred) 
 
-                pred = pred + self._low_fi_denormalize(low_fi_pred)
-
-                
+                pred = self._residual_denormalize(residual_pred) + self._low_fi_denormalize(low_fi_pred)
 
         else:
             with torch.no_grad():
@@ -93,26 +93,4 @@ class MethodsInference:
                 writer.writerow(row)
 
 
-    def _add_freestream(self, output):
     
-        freestream_by_name = {
-            "Density (kg/m^3)":       1.1766728065550904,
-            "Velocity[i] (m/s)":      -3472.4454196563174,
-            "Velocity[j] (m/s)":      0.0,
-            "Velocity[k] (m/s)":      0.0,
-            "Absolute Pressure (Pa)": 101324.99849262246,
-            "Temperature (K)":        300.0,
-        }
-
-        output_columns = [
-            "Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)",
-            "Velocity[k] (m/s)", "Absolute Pressure (Pa)", "Temperature (K)"
-        ]
-
-        fs_vec = np.array([freestream_by_name[c] for c in output_columns], dtype=float)
-
-        if isinstance(output, torch.Tensor):
-            fs_vec = torch.tensor(fs_vec, dtype=output.dtype, device=output.device)
-            return output + fs_vec.view(1, -1)
-        else:
-            return output + fs_vec.reshape(1, -1)
