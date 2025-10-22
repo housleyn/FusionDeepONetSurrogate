@@ -4,17 +4,18 @@ from ..MLP import MLP
 
 
 class VanillaDeepONet(nn.Module):
-    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim):
+    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, aux=None):
         super().__init__()
         self.hidden_size = hidden_size
         self.out_dim = out_dim
         self.num_hidden_layers = num_hidden_layers
+        self.aux = aux
 
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers)
 
         self.trunk = MLP(coord_dim, hidden_size, hidden_size, num_hidden_layers)
 
-    def forward(self, coords, params, sdf):
+    def forward(self, coords, params, sdf, aux=None):
         B, n_pts, _ = coords.shape
         H = self.hidden_size
         O = self.out_dim

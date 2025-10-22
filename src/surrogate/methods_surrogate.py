@@ -52,7 +52,6 @@ class MethodsSurrogate:
             )
         if self.model_type == "low_fi_fusion":
             print("Using Low Fidelity Fusion DeepONet model.")
-            print(f"coord_dim={self.coord_dim + self.distance_dim}")
             self.model = Low_Fidelity_FusionDeepONet(
                 coord_dim=self.coord_dim + self.distance_dim,
                 param_dim=self.param_dim,

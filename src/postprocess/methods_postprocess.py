@@ -183,7 +183,7 @@ class MethodsPostprocess:
         error_values = error[field].values
         
         # Create figure with 3 subplots
-        fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+        fig, axs = plt.subplots(1, 3, figsize=(36, 12))
         
         # Data for each subplot
         datasets = [pred_values, true_values, error_values]

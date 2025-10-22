@@ -2,7 +2,7 @@ import os
 import yaml
 
 config = {
-    "project_name": "x_43",
+    "project_name": "spheres",
     "lr": 1e-3,
     "batch_size": 36,
     "num_epochs": 3,
