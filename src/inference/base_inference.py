@@ -23,10 +23,10 @@ class BaseInference:
             # Load both LF and HF models in a single call where `path` points to the HF checkpoint.
             # `_load_model` will internally use `self.low_fi_model_path` for the LF model and `path` for the HF model.
 
-            model_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                "Outputs", project_name, "model", "fusion_deeponet.pt"
-            )
+            model_path = model_path #os.path.join(
+            #     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            #     "Outputs", project_name, "model", "fusion_deeponet.pt"
+            # )
             residual_stats_path = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                 "Outputs", project_name, "residual.npz"

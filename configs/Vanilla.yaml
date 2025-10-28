@@ -21,6 +21,6 @@ param_columns:
 - a4
 param_dim: 3
 print_every: 1
-project_name: double_hf
+project_name: model_sweep_vanilla
 shuffle: true
 test_size: 0.2

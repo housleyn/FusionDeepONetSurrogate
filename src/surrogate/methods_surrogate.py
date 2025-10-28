@@ -31,9 +31,14 @@ class MethodsSurrogate:
 
     def _load_data(self):
         data = Data(self.npz_path)
-        data_low_fi = Data(self.low_fi_output_path) if self.low_fi_output_path else None
         self.train_loader, self.test_loader = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
-        self.train_loader_low_fi, self.test_loader_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size) if data_low_fi else (None, None)
+        
+        if self.model_type == "low_fi_fusion" and self.low_fi_output_path:
+            data_low_fi = Data(self.low_fi_output_path)
+            self.train_loader_low_fi, self.test_loader_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+        else:
+            self.train_loader_low_fi, self.test_loader_low_fi = None, None
+            
         print("Data loaded in dataloader.")
 
     def _create_model(self):
@@ -81,7 +86,7 @@ class MethodsSurrogate:
                 hidden_size=self.hidden_size,
                 num_hidden_layers=self.num_hidden_layers,
                 out_dim=self.output_dim,
-                aux_dim=self.output_dim  # <- pointwise u_LF(ξ) concat
+                aux_dim=self.output_dim  
             ).to(self.device)
             trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
@@ -199,8 +204,8 @@ class MethodsSurrogate:
                     # ---- Denormalize both HF and LF ----
                     u_hf_denorm = targets * std_hf + mu_hf
                     u_lf = lf_model(coords, params, sdf)
-                    if u_lf.shape != targets.shape:
-                        u_lf = u_lf.view_as(targets)
+                    assert u_lf.shape == targets.shape, \
+                        f"LF/HF shape mismatch: lf {u_lf.shape}, hf {targets.shape}"
                     u_lf_denorm = u_lf * std_lf + mu_lf
 
                     # ---- Residuals in denormalized space ----
