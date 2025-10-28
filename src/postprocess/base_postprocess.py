@@ -1,6 +1,6 @@
 import pandas as pd
 class BasePostprocess:
-    def __init__(self, project_name,path_true=None, path_pred=None, param_columns=None):
+    def __init__(self, project_name, model_type=None, params=None, path_true=None, path_pred=None, param_columns=None):
 
         if path_true is None:
             self.df_true = None
@@ -11,3 +11,5 @@ class BasePostprocess:
                         "Absolute Pressure (Pa)", "Temperature (K)", "X (m)", "Y (m)", "Z (m)"]]
         self.errors = {}
         self.project_name = project_name
+        self.model_type = model_type
+        self.params = params

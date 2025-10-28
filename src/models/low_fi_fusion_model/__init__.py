@@ -56,4 +56,9 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
         out = torch.sum (ZL * YL, dim=-1)  # (B, N_pts, O)                                              dot product
         return out
     
-   
+    def _load_stats(self, npz_path):
+        data = np.load(npz_path)
+        return {
+            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
+            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
+        }
