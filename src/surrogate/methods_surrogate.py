@@ -163,7 +163,7 @@ class MethodsSurrogate:
         return sorted(glob.glob(os.path.join(base_dir, "*.csv")))
     
 
-    def _make_residual_dataset(self, hf_npz_out, low_fi_stats_path=None, high_fi_stats_path=None):
+    def _make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_path):
         hf_train_loader = self.train_loader
         hf_test_loader  = self.test_loader
 

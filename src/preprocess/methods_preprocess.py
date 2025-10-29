@@ -168,28 +168,4 @@ class MethodsPreprocess:
         std[std == 0] = 1  
         return (data - mean) / std, mean, std
 
-    def _subtract_free_stream(self, data):
-
-        self.freestream_by_name = {
-            "Density (kg/m^3)":       1.1766728065550904,
-            "Velocity[i] (m/s)":      -3472.4454196563174,
-            "Velocity[j] (m/s)":      0.0,
-            "Velocity[k] (m/s)":      0.0,
-            "Absolute Pressure (Pa)": 101324.99849262246,
-            "Temperature (K)":        300.0,
-        }
-
-        self.output_columns = [
-            "Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)",
-            "Velocity[k] (m/s)", "Absolute Pressure (Pa)", "Temperature (K)"
-        ]
-
-            # Validate all names exist
-        missing = [c for c in self.output_columns if c not in self.freestream_by_name]
-        if missing:
-            raise ValueError(f"Missing freestream values for columns: {missing}")
-        # Ordered vector matching self.output_columns
-        fs_vec = np.array([self.freestream_by_name[c] for c in self.output_columns], dtype=float)
-        
-
-        return data - fs_vec.reshape(1, -1)
+    

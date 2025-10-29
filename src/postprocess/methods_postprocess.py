@@ -166,6 +166,7 @@ class MethodsPostprocess:
             residuals = residuals_all[param_mask]
 
             # === Denormalize residuals for this case ===
+            r_norm = residuals
             r_denorm = residuals * std_r + mu_r
 
             # === Compute residual per field ===
@@ -183,24 +184,28 @@ class MethodsPostprocess:
 
             idx = field_map[field]
             residual_field = r_denorm[..., idx].flatten()
+            residual_norm_field = r_norm[..., idx].flatten()
 
             # === Interpolate residuals to same grid as other plots ===
             coords_flat = coords.reshape(-1, coords.shape[-1])
             zi_residual = griddata((coords_flat[:, 0], coords_flat[:, 1]), 
                                 residual_field, (xi, yi), method='cubic')
-            
+            zi_residual_norm = griddata((coords_flat[:, 0], coords_flat[:, 1]), 
+                                residual_norm_field, (xi, yi), method='cubic')
+
             # Apply the same mask used for other plots
             zi_residual[mask] = np.nan
+            zi_residual_norm[mask] = np.nan
 
             # === Plot contour plots ===
-            fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-            
-            # Plot 1: Residual contour
+            fig, axs = plt.subplots(1, 3, figsize=(18, 6))  # Changed to 3 subplots
+
+            # Plot 1: Denormalized residual contour
             vmin_res = np.nanmin(zi_residual)
             vmax_res = np.nanmax(zi_residual)
             ticks_res = np.linspace(vmin_res, vmax_res, 9)
             tick_labels_res = [f"{t:.3f}" for t in ticks_res]
-            
+
             levels_res = np.linspace(vmin_res, vmax_res, 100)
             contour1 = axs[0].contourf(xi, yi, zi_residual, levels=levels_res, 
                                     cmap='inferno', vmin=vmin_res, vmax=vmax_res)
@@ -211,38 +216,44 @@ class MethodsPostprocess:
             axs[0].set_title(f"Residual Field – {field}")
             axs[0].set_xlabel("X (m)")
             axs[0].set_ylabel("Y (m)")
-            
-            # Plot 2: Absolute residual contour
+
+            # Plot 2: Normalized residual contour
+            vmin_res_norm = np.nanmin(zi_residual_norm)
+            vmax_res_norm = np.nanmax(zi_residual_norm)
+            ticks_res_norm = np.linspace(vmin_res_norm, vmax_res_norm, 9)
+            tick_labels_res_norm = [f"{t:.3f}" for t in ticks_res_norm]
+
+            levels_res_norm = np.linspace(vmin_res_norm, vmax_res_norm, 100)
+            contour2 = axs[1].contourf(xi, yi, zi_residual_norm, levels=levels_res_norm, 
+                                    cmap='inferno', vmin=vmin_res_norm, vmax=vmax_res_norm)
+            cbar2 = fig.colorbar(contour2, ax=axs[1], ticks=ticks_res_norm)
+            cbar2.ax.set_yticklabels(tick_labels_res_norm)
+            cbar2.set_label(f"Residual {field} (Normalized)")
+            cbar2.ax.tick_params(labelsize=14)
+            axs[1].set_title(f"Normalized Residual Field – {field}")
+            axs[1].set_xlabel("X (m)")
+            axs[1].set_ylabel("Y (m)")
+
+            # Plot 3: Absolute residual contour
             zi_abs_residual = np.abs(zi_residual)
             vmin_abs = np.nanmin(zi_abs_residual)
             vmax_abs = np.nanmax(zi_abs_residual)
             ticks_abs = np.linspace(vmin_abs, vmax_abs, 9)
             tick_labels_abs = [f"{t:.3f}" for t in ticks_abs]
-            
+
             levels_abs = np.linspace(vmin_abs, vmax_abs, 100)
-            contour2 = axs[1].contourf(xi, yi, zi_abs_residual, levels=levels_abs, 
+            contour3 = axs[2].contourf(xi, yi, zi_abs_residual, levels=levels_abs, 
                                     cmap='inferno', vmin=vmin_abs, vmax=vmax_abs)
-            cbar2 = fig.colorbar(contour2, ax=axs[1], ticks=ticks_abs)
-            cbar2.ax.set_yticklabels(tick_labels_abs)
-            cbar2.set_label(f"|Residual| {field}")
-            cbar2.ax.tick_params(labelsize=14)
-            axs[1].set_title(f"Absolute Residual Field – {field}")
-            axs[1].set_xlabel("X (m)")
-            axs[1].set_ylabel("Y (m)")
-            
+            cbar3 = fig.colorbar(contour3, ax=axs[2], ticks=ticks_abs)
+            cbar3.ax.set_yticklabels(tick_labels_abs)
+            cbar3.set_label(f"|Residual| {field}")
+            cbar3.ax.tick_params(labelsize=14)
+            axs[2].set_title(f"Absolute Residual Field – {field}")
+            axs[2].set_xlabel("X (m)")
+            axs[2].set_ylabel("Y (m)")
+
             plt.tight_layout()
             plt.savefig(os.path.join(error_dir, f"{safe_field}_residual_contours.png"))
-            plt.close()
-
-            # === Plot histogram ===
-            plt.figure(figsize=(8, 5))
-            plt.hist(residual_field, bins=100, log=True, color='orange', edgecolor='black')
-            plt.title(f"Residual Distribution – {field}")
-            plt.xlabel(f"{field} Residual Value")
-            plt.ylabel("Count (log scale)")
-            plt.grid(True)
-            plt.tight_layout()
-            plt.savefig(os.path.join(error_dir, f"{safe_field}_residual_histogram.png"))
             plt.close()
 
             print(f"✅ Residual plots saved for field '{field}' and case params {target_param}")

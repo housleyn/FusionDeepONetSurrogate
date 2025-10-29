@@ -20,6 +20,6 @@ param_columns:
 - b
 param_dim: 2
 print_every: 1
-project_name: low_fi_test2
+project_name: ellipse_test
 shuffle: true
 test_size: 0.2

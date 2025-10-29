@@ -21,14 +21,12 @@ class MethodsTrainer:
                 targets.requires_grad = True
                 sdf = sdf.to(self.device)
                 aux = maybe_aux[0].to(self.device) if len(maybe_aux) else None
-                # weights = weights.to(self.device)
+                
 
                 self.optimizer.zero_grad()
                 outputs = self.model(coords, params, sdf, aux=aux)
                 
-                # if self.loss_type == "weighted_mse":
-                #     loss = self.weighted_mse(outputs, targets)
-                # elif self.loss_type == "mse":
+                
                 loss = self.criterion(outputs, targets)
                 loss.backward()
                 
