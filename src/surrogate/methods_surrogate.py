@@ -236,6 +236,8 @@ class MethodsSurrogate:
 
         # --- Normalize back in the same padded shape ---
         r_norm = (residuals - mu_r.numpy()) / std_r.numpy()
+        uLF_norm = (uLF - mu_r.numpy()) / std_r.numpy()
+
 
         # --- Save residual dataset in padded format ---
         np.savez_compressed(
@@ -244,7 +246,7 @@ class MethodsSurrogate:
             params=params,
             sdf=sdf,
             outputs=r_norm,
-            aux_lf_pointwise=uLF,
+            aux_lf_pointwise=uLF_norm,
             targets_highfi=uHF,
             outputs_mean=mu_r.numpy(),   # keep naming consistent with _load_stats()
             outputs_std=std_r.numpy()
