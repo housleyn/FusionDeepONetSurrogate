@@ -71,7 +71,7 @@ class MethodsPostprocess:
     def _plot_generic(self, field, error, mask_type):
         x = self.df_true["X (m)"].values
         y = self.df_true["Y (m)"].values
-        xi, yi = np.meshgrid(np.linspace(x.min(), x.max(), 500), np.linspace(y.min(), y.max(), 500))
+        xi, yi = np.meshgrid(np.linspace(x.min(), x.max(), 500), np.linspace(y.min(), y.max(), 500)) #fix put the actual coordinates in here
 
         zi_true = griddata((x, y), self.df_true[field].values, (xi, yi), method='cubic')
         zi_pred = griddata((x, y), self.df_pred[field].values, (xi, yi), method='cubic')
