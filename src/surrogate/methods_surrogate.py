@@ -53,8 +53,7 @@ class MethodsSurrogate:
                 param_dim=self.param_dim,
                 hidden_size=self.hidden_size,
                 num_hidden_layers=self.num_hidden_layers,
-                out_dim=self.output_dim,
-                dropout=self.dropout
+                out_dim=self.output_dim
             )
         if self.model_type == "low_fi_fusion":
             print("Using Low Fidelity Fusion DeepONet model.")
@@ -65,7 +64,7 @@ class MethodsSurrogate:
                 num_hidden_layers=self.num_hidden_layers,
                 out_dim=self.output_dim,
                 npz_path=self.low_fi_output_path,
-                dropout=self.dropout
+                dropout=self.low_fi_dropout
             )
 
     def _train_model(self):

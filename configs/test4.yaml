@@ -20,7 +20,8 @@ param_columns:
 - b
 param_dim: 2
 print_every: 1
-project_name: dropout_test_fusion
+project_name: dropout_test_fusion2
 shuffle: false
 test_size: 0.2
-dropout: 0.3
+dropout: .3
+

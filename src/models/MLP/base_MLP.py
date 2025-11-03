@@ -3,7 +3,7 @@ import torch.nn as nn
 from ..activations import RowdyActivation
 
 class BaseMLP(nn.Module):
-    def __init__(self, in_features, out_features, hidden_features, num_hidden_layers, dropout=.5):
+    def __init__(self, in_features, out_features, hidden_features, num_hidden_layers, dropout=0.0):
         super().__init__()
         self.layers = nn.ModuleList()
         self.activations = nn.ModuleList()

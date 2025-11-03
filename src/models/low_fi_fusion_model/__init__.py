@@ -5,7 +5,7 @@ from ..activations import RowdyActivation
 import numpy as np
 
 class Low_Fidelity_FusionDeepONet(nn.Module):
-    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, npz_path, aux_dim=0, dropout=0.5):
+    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, npz_path, aux_dim=0, dropout=0.0):
         super().__init__()
         self.hidden_size = hidden_size
         self.out_dim = out_dim 
