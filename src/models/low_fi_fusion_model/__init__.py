@@ -5,7 +5,7 @@ from ..activations import RowdyActivation
 import numpy as np
 
 class Low_Fidelity_FusionDeepONet(nn.Module):
-    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, npz_path, aux_dim=0):
+    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, npz_path, aux_dim=0, dropout=0.5):
         super().__init__()
         self.hidden_size = hidden_size
         self.out_dim = out_dim 
@@ -15,7 +15,7 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
         self.outputs_std = self._load_stats(npz_path)["outputs_std"]
         
 
-        self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers)
+        self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers, dropout)
 
         input_dim = coord_dim + aux_dim #coord_dim + distance_dim + free stream values (6)  
         self.trunk_layers = nn.ModuleList([
@@ -24,6 +24,9 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
         ])
         self.trunk_activations = nn.ModuleList([
             RowdyActivation(hidden_size) for _ in range(num_hidden_layers)
+        ])
+        self.trunk_dropouts = nn.ModuleList([
+            nn.Dropout(dropout) for _ in range(num_hidden_layers - 1)
         ])
         self.trunk_final = nn.Linear(hidden_size, hidden_size)
 
@@ -42,6 +45,8 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
         x = torch.cat((coords, sdf), dim=-1) if aux is None else torch.cat((coords, sdf, aux), dim=-1)
         for i, (layer,act) in enumerate(zip(self.trunk_layers,self.trunk_activations)):
             x = act(layer(x))
+            if i > 0:
+                x = self.trunk_dropouts[i-1](x)
 
             if i < len(S):
                 S_i = S[i].unsqueeze(1) #change dimension of branch to be multiplied by trunk (B, 1, H)

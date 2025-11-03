@@ -71,28 +71,28 @@ class MethodsPostprocess:
     def _plot_generic(self, field, error, mask_type):
         x = self.df_true["X (m)"].values
         y = self.df_true["Y (m)"].values
-        xi, yi = np.meshgrid(np.linspace(x.min(), x.max(), 500), np.linspace(y.min(), y.max(), 500)) #fix put the actual coordinates in here
+        xi, yi = np.meshgrid(np.unique(x)[::100], np.unique(y)[::100])
 
-        zi_true = griddata((x, y), self.df_true[field].values, (xi, yi), method='cubic')
-        zi_pred = griddata((x, y), self.df_pred[field].values, (xi, yi), method='cubic')
-        zi_error = np.abs(griddata((x, y), error[field].values, (xi, yi), method='cubic'))
+        zi_true = griddata((x, y), self.df_true[field].values, (xi, yi), method='linear')
+        zi_pred = griddata((x, y), self.df_pred[field].values, (xi, yi), method='linear')
+        zi_error = np.abs(griddata((x, y), error[field].values, (xi, yi), method='linear'))
 
-        if mask_type == "ellipse":
-            a = self.df_true["a"].values[0]
-            b = self.df_true["b"].values[0]
-            x0, y0 = -2.5, 0
-            mask = ((xi - x0)**2 / a**2 + (yi - y0)**2 / b**2) <= 1
-        elif mask_type == "spheres":
-            x1, y1 = 0, 0
-            x2, y2 = self.df_true["x"].values[0], self.df_true["y"].values[0]
-            radius = 1.0
-            mask = ((xi - x1)**2 + (yi - y1)**2 <= radius**2) | ((xi - x2)**2 + (yi - y2)**2 <= radius**2)
-        else:
-            self.plot_point_cloud(field, error)
-            return
+        # if mask_type == "ellipse":
+        #     a = self.df_true["a"].values[0]
+        #     b = self.df_true["b"].values[0]
+        #     x0, y0 = -2.5, 0
+        #     mask = ((xi - x0)**2 / a**2 + (yi - y0)**2 / b**2) <= 1
+        # elif mask_type == "spheres":
+        #     x1, y1 = 0, 0
+        #     x2, y2 = self.df_true["x"].values[0], self.df_true["y"].values[0]
+        #     radius = 1.0
+        #     mask = ((xi - x1)**2 + (yi - y1)**2 <= radius**2) | ((xi - x2)**2 + (yi - y2)**2 <= radius**2)
+        # else:
+        #     self.plot_point_cloud(field, error)
+        #     return
 
-        for z in [zi_true, zi_pred, zi_error]:
-            z[mask] = np.nan
+        # for z in [zi_true, zi_pred, zi_error]:
+        #     z[mask] = np.nan
 
         fig, axs = plt.subplots(1, 3, figsize=(18, 6))
         titles = ["Predicted", "True", "Error"]
@@ -189,13 +189,13 @@ class MethodsPostprocess:
             # === Interpolate residuals to same grid as other plots ===
             coords_flat = coords.reshape(-1, coords.shape[-1])
             zi_residual = griddata((coords_flat[:, 0], coords_flat[:, 1]), 
-                                residual_field, (xi, yi), method='cubic')
+                                residual_field, (xi, yi), method='linear')
             zi_residual_norm = griddata((coords_flat[:, 0], coords_flat[:, 1]), 
-                                residual_norm_field, (xi, yi), method='cubic')
+                                residual_norm_field, (xi, yi), method='linear')
 
             # Apply the same mask used for other plots
-            zi_residual[mask] = np.nan
-            zi_residual_norm[mask] = np.nan
+            # zi_residual[mask] = np.nan
+            # zi_residual_norm[mask] = np.nan
 
             # === Plot contour plots ===
             fig, axs = plt.subplots(1, 3, figsize=(18, 6))  # Changed to 3 subplots

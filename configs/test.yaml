@@ -12,7 +12,7 @@ loss_type: mse
 lr: 0.0001
 lr_gamma: 1.2
 model_type: low_fi_fusion
-num_epochs: 50000
+num_epochs: 3
 num_hidden_layers: 5
 output_dim: 6
 param_columns:
@@ -23,3 +23,4 @@ print_every: 1
 project_name: ellipse_test
 shuffle: true
 test_size: 0.2
+dropout: 0.5

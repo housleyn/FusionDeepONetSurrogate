@@ -31,6 +31,7 @@ class BaseSurrogate:
         self.lr_gamma = config["lr_gamma"]
         self.model_type = config["model_type"]
         self.loss_type = config["loss_type"]
+        self.dropout = config.get("dropout", 0.5)
 
         self.project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

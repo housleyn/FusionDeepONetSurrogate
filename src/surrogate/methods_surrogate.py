@@ -53,7 +53,8 @@ class MethodsSurrogate:
                 param_dim=self.param_dim,
                 hidden_size=self.hidden_size,
                 num_hidden_layers=self.num_hidden_layers,
-                out_dim=self.output_dim
+                out_dim=self.output_dim,
+                dropout=self.dropout
             )
         if self.model_type == "low_fi_fusion":
             print("Using Low Fidelity Fusion DeepONet model.")
@@ -63,7 +64,8 @@ class MethodsSurrogate:
                 hidden_size=self.hidden_size,
                 num_hidden_layers=self.num_hidden_layers,
                 out_dim=self.output_dim,
-                npz_path=self.low_fi_output_path
+                npz_path=self.low_fi_output_path,
+                dropout=self.dropout
             )
 
     def _train_model(self):
@@ -86,7 +88,8 @@ class MethodsSurrogate:
                 hidden_size=self.hidden_size,
                 num_hidden_layers=self.num_hidden_layers,
                 out_dim=self.output_dim,
-                aux_dim=self.output_dim  
+                aux_dim=self.output_dim,
+                dropout=self.dropout
             ).to(self.device)
             trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
