@@ -24,3 +24,5 @@ project_name: dropout_test_lo_fi
 shuffle: false
 test_size: 0.2
 dropout: 0.3
+dist_threshold: 0.075
+edge_percentile: 3

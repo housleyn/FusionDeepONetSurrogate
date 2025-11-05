@@ -1,15 +1,17 @@
+from matplotlib.ticker import MaxNLocator
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 import os
+import matplotlib.tri as tri
+import matplotlib.colors as mcolors
 
 class MethodsPostprocess:
-    def run(self, dimension, shape):
-        error = self._calculate_error()
+    def run(self, dimension):
+        self._calculate_error()
         self._define_ouput_folders()
-        fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)",
-                "Absolute Pressure (Pa)", "Density (kg/m^3)", "Temperature (K)"]
+        fields = self.fields
         if dimension == 3:
             fields.insert(2, "Velocity[k] (m/s)")
 
@@ -18,23 +20,13 @@ class MethodsPostprocess:
 
         self._create_table()
 
-        # Fix the shape selection logic
-        if shape == "ellipse":
-            plot_func = self._plot_fields
-        elif shape == "spheres": 
-            plot_func = self._plot_fields_spheres
-        else:  # shape == "None" or any other value
-            # Use point cloud plotting (no interpolation, no masking)
-            plot_func = lambda field, error: self.plot_point_cloud(field, error)
-        
-        for field in fields:
-            plot_func(field, error)
-
+        self.plot_fields()
+    
     def _calculate_error(self):
         error = np.abs(self.df_true - self.df_pred)
         error["X (m)"] = self.df_true["X (m)"]
         error["Y (m)"] = self.df_true["Y (m)"]
-        return error
+        self.error = error
 
     def _calculate_relative_l2_error(self, field):
         u_true = self.df_true[field].values
@@ -62,295 +54,238 @@ class MethodsPostprocess:
         plt.savefig(os.path.join(self.tables_dir, "relative_l2_errors.png"), bbox_inches='tight')
         plt.close()
 
-    def _plot_fields(self, field, error):
-        self._plot_generic(field, error, mask_type="ellipse")
+    def plot_fields(self):
 
-    def _plot_fields_spheres(self, field, error):
-        self._plot_generic(field, error, mask_type="spheres")
+        x_col = self.df_true["X (m)"].values
+        y_col = self.df_true["Y (m)"].values
+        if "distanceToSurface" in self.df_true.columns:
+            dist_col = self.df_true["distanceToSurface"].values
+        elif "distanceToEllipse" in self.df_true.columns:
+            dist_col = self.df_true["distanceToEllipse"].values
+        else:
+            raise ValueError("Neither 'distanceToSurface' nor 'distanceToEllipse' column found in the dataset")
 
-    def _plot_generic(self, field, error, mask_type):
-        x = self.df_true["X (m)"].values
-        y = self.df_true["Y (m)"].values
-        xi, yi = np.meshgrid(np.unique(x)[::100], np.unique(y)[::100])
+        x, y = x_col, y_col
+        dist = dist_col
+        triang = tri.Triangulation(x,y)
 
-        zi_true = griddata((x, y), self.df_true[field].values, (xi, yi), method='linear')
-        zi_pred = griddata((x, y), self.df_pred[field].values, (xi, yi), method='linear')
-        zi_error = np.abs(griddata((x, y), error[field].values, (xi, yi), method='linear'))
+        xtri, ytri = x[triang.triangles], y[triang.triangles]
+        edge_lengths = np.sqrt((xtri[:, None, :] - xtri[:, :, None])**2 +
+                       (ytri[:, None, :] - ytri[:, :, None])**2)
+        
+        max_edge = np.max(edge_lengths, axis=(1,2))
+        dist_tri = dist[triang.triangles]
+        dist_centroid = dist_tri.mean(axis=1)
 
-        # if mask_type == "ellipse":
-        #     a = self.df_true["a"].values[0]
-        #     b = self.df_true["b"].values[0]
-        #     x0, y0 = -2.5, 0
-        #     mask = ((xi - x0)**2 / a**2 + (yi - y0)**2 / b**2) <= 1
-        # elif mask_type == "spheres":
-        #     x1, y1 = 0, 0
-        #     x2, y2 = self.df_true["x"].values[0], self.df_true["y"].values[0]
-        #     radius = 1.0
-        #     mask = ((xi - x1)**2 + (yi - y1)**2 <= radius**2) | ((xi - x2)**2 + (yi - y2)**2 <= radius**2)
-        # else:
-        #     self.plot_point_cloud(field, error)
-        #     return
+        edge_threshold = np.percentile(max_edge, self.edge_percentile)
+        dist_threshold = self.dist_threshold
 
-        # for z in [zi_true, zi_pred, zi_error]:
-        #     z[mask] = np.nan
+        mask = (max_edge > edge_threshold) & (dist_centroid < dist_threshold)
+        triang.set_mask(mask)
 
-        fig, axs = plt.subplots(1, 3, figsize=(18, 6))
-        titles = ["Predicted", "True", "Error"]
-        datasets = [zi_pred, zi_true, zi_error]
-        cmaps = ["inferno"] * 3
+        for field in self.fields:
+            zi_true = self.df_true[field].values
+            zi_pred = self.df_pred[field].values
+            zi_error = self.error[field].values
 
-        vmin_tp = np.nanmin([zi_true])
-        vmax_tp = np.nanmax([zi_true])
-        ticks_tp = np.linspace(vmin_tp, vmax_tp, 9)
-        tick_labels_tp = [f"{t:.3f}" for t in ticks_tp]
+            # shared normalization for predicted and true
+            vmin_tp = np.nanmin([zi_true, zi_pred])
+            vmax_tp = np.nanmax([zi_true, zi_pred])
+            norm_tp = mcolors.Normalize(vmin=vmin_tp, vmax=vmax_tp)
 
-        vmin_err = np.nanmin(zi_error)
-        vmax_err = np.nanmax(zi_error)
-        ticks_err = np.linspace(vmin_err, vmax_err, 9)
-        tick_labels_err = [f"{t:.3f}" for t in ticks_err]
+            # normalization for error
+            vmin_err = np.nanmin(zi_error)
+            vmax_err = np.nanmax(zi_error)
+            norm_err = mcolors.Normalize(vmin=vmin_err, vmax=vmax_err)
+            
+            
+            fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+            titles = ["Predicted", "True", "Error"]
+            datasets = [zi_pred, zi_true, zi_error]
+            cmaps = ["inferno"] * 3
+            norms = [norm_tp, norm_tp, norm_err]
+            levels = np.linspace(vmin_tp, vmax_tp, 100)
+            
 
-        for ax, data, title, cmap in zip(axs, datasets, titles, cmaps):
-            if title == "Error":
-                contour = ax.contourf(xi, yi, data, levels=100, cmap=cmap, vmin=vmin_err, vmax=vmax_err)
-                cbar = fig.colorbar(contour, ax=ax, ticks=ticks_err)
-                cbar.ax.set_yticklabels(tick_labels_err)
-                cbar.set_label("Error Color Scale")
-            else:
-                levels = np.linspace(vmin_tp, vmax_tp, 100)
-                contour = ax.contourf(xi, yi, data, levels=levels, cmap=cmap, vmin=vmin_tp, vmax=vmax_tp)
-                cbar = fig.colorbar(contour, ax=ax, ticks=ticks_tp)
-                cbar.ax.set_yticklabels(tick_labels_tp)
-                cbar.set_label(f"{field} Color Scale")
-            cbar.ax.tick_params(labelsize=14)
-            ax.set_title(f"{field} - {title}")
-            ax.set_xlabel("X (m)")
-            ax.set_ylabel("Y (m)")
+            for ax, data, title, cmap, norm in zip(axs, datasets, titles, cmaps, norms):
+                if title == "Error":
+                    levels = 100
+                contour = ax.tricontourf(triang, data, levels=levels, cmap=cmap, norm=norm)
+                cbar = fig.colorbar(contour, ax=ax)
 
-        plt.tight_layout()
-        safe_field = field.replace(' ', '_').replace('[', '').replace(']', '')\
-                          .replace('(', '').replace(')', '').replace('/', '_')
-        error_dir = os.path.join(self.figures_dir, "error_figures")
-        os.makedirs(error_dir, exist_ok=True)
-        plt.savefig(os.path.join(error_dir, f"{safe_field}_comparison.png"))
-        plt.close()
-        print(f"Saved comparison plot for {field} to {error_dir}/{safe_field}_comparison.png")
+                locator = MaxNLocator(nbins=8, prune=None)
+                cbar.locator = locator
+                cbar.update_ticks()
 
-        if self.model_type == "low_fi_fusion":
-            residual_data = np.load(os.path.join("Outputs", self.project_name, "residual.npz"), allow_pickle=True)
-            coords_all = residual_data["coords"]
-            residuals_all = residual_data["outputs"]
-            mu_r = residual_data["outputs_mean"]
-            std_r = residual_data["outputs_std"]
-            params_all = residual_data["params"]
-
-            # === Match validation case parameters ===
-            if not hasattr(self, "params") or self.params is None or len(self.params) == 0:
-                print("⚠ No parameter columns provided in self.params — cannot match residual case.")
-                return
-
-            # Ensure order of columns in self.params matches how params were saved
-            target_param = self.df_true[self.params].iloc[0].to_numpy().astype(float)
-
-            # find matching samples in residual file
-            tol = 1e-6
-            param_mask = np.all(np.isclose(params_all, target_param, atol=tol), axis=1)
-
-            if not np.any(param_mask):
-                # helpful debug info
-                unique_params = np.unique(params_all, axis=0)
-                print(f"⚠ No residual entries matched parameters: {target_param}")
-                print(f"Available unique param vectors in residual.npz:\n{unique_params[:5]}")
-                return
-
-            coords = coords_all[param_mask]
-            residuals = residuals_all[param_mask]
-
-            # === Denormalize residuals for this case ===
-            r_norm = residuals
-            r_denorm = residuals * std_r + mu_r
-
-            # === Compute residual per field ===
-            field_map = {
-                "Velocity[i] (m/s)": 0,
-                "Velocity[j] (m/s)": 1,
-                "Absolute Pressure (Pa)": 2,
-                "Density (kg/m^3)": 3,
-                "Temperature (K)": 4
-            }
-
-            if field not in field_map:
-                print(f"⚠ Field '{field}' not recognized in residual field map.")
-                return
-
-            idx = field_map[field]
-            residual_field = r_denorm[..., idx].flatten()
-            residual_norm_field = r_norm[..., idx].flatten()
-
-            # === Interpolate residuals to same grid as other plots ===
-            coords_flat = coords.reshape(-1, coords.shape[-1])
-            zi_residual = griddata((coords_flat[:, 0], coords_flat[:, 1]), 
-                                residual_field, (xi, yi), method='linear')
-            zi_residual_norm = griddata((coords_flat[:, 0], coords_flat[:, 1]), 
-                                residual_norm_field, (xi, yi), method='linear')
-
-            # Apply the same mask used for other plots
-            # zi_residual[mask] = np.nan
-            # zi_residual_norm[mask] = np.nan
-
-            # === Plot contour plots ===
-            fig, axs = plt.subplots(1, 3, figsize=(18, 6))  # Changed to 3 subplots
-
-            # Plot 1: Denormalized residual contour
-            vmin_res = np.nanmin(zi_residual)
-            vmax_res = np.nanmax(zi_residual)
-            ticks_res = np.linspace(vmin_res, vmax_res, 9)
-            tick_labels_res = [f"{t:.3f}" for t in ticks_res]
-
-            levels_res = np.linspace(vmin_res, vmax_res, 100)
-            contour1 = axs[0].contourf(xi, yi, zi_residual, levels=levels_res, 
-                                    cmap='inferno', vmin=vmin_res, vmax=vmax_res)
-            cbar1 = fig.colorbar(contour1, ax=axs[0], ticks=ticks_res)
-            cbar1.ax.set_yticklabels(tick_labels_res)
-            cbar1.set_label(f"Residual {field}")
-            cbar1.ax.tick_params(labelsize=14)
-            axs[0].set_title(f"Residual Field – {field}")
-            axs[0].set_xlabel("X (m)")
-            axs[0].set_ylabel("Y (m)")
-
-            # Plot 2: Normalized residual contour
-            vmin_res_norm = np.nanmin(zi_residual_norm)
-            vmax_res_norm = np.nanmax(zi_residual_norm)
-            ticks_res_norm = np.linspace(vmin_res_norm, vmax_res_norm, 9)
-            tick_labels_res_norm = [f"{t:.3f}" for t in ticks_res_norm]
-
-            levels_res_norm = np.linspace(vmin_res_norm, vmax_res_norm, 100)
-            contour2 = axs[1].contourf(xi, yi, zi_residual_norm, levels=levels_res_norm, 
-                                    cmap='inferno', vmin=vmin_res_norm, vmax=vmax_res_norm)
-            cbar2 = fig.colorbar(contour2, ax=axs[1], ticks=ticks_res_norm)
-            cbar2.ax.set_yticklabels(tick_labels_res_norm)
-            cbar2.set_label(f"Residual {field} (Normalized)")
-            cbar2.ax.tick_params(labelsize=14)
-            axs[1].set_title(f"Normalized Residual Field – {field}")
-            axs[1].set_xlabel("X (m)")
-            axs[1].set_ylabel("Y (m)")
-
-            # Plot 3: Absolute residual contour
-            zi_abs_residual = np.abs(zi_residual)
-            vmin_abs = np.nanmin(zi_abs_residual)
-            vmax_abs = np.nanmax(zi_abs_residual)
-            ticks_abs = np.linspace(vmin_abs, vmax_abs, 9)
-            tick_labels_abs = [f"{t:.3f}" for t in ticks_abs]
-
-            levels_abs = np.linspace(vmin_abs, vmax_abs, 100)
-            contour3 = axs[2].contourf(xi, yi, zi_abs_residual, levels=levels_abs, 
-                                    cmap='inferno', vmin=vmin_abs, vmax=vmax_abs)
-            cbar3 = fig.colorbar(contour3, ax=axs[2], ticks=ticks_abs)
-            cbar3.ax.set_yticklabels(tick_labels_abs)
-            cbar3.set_label(f"|Residual| {field}")
-            cbar3.ax.tick_params(labelsize=14)
-            axs[2].set_title(f"Absolute Residual Field – {field}")
-            axs[2].set_xlabel("X (m)")
-            axs[2].set_ylabel("Y (m)")
+                cbar.set_label(
+                    f"{field} Color Scale" if title != "Error" else "Error Color Scale"
+                )
+                cbar.ax.tick_params(labelsize=12)
+                ax.set_title(f"{field} - {title}")
+                ax.set_xlabel("X (m)")
+                ax.set_ylabel("Y (m)")
+                ax.set_xlim(self.x_lim)
+                ax.set_ylim(self.y_lim)
 
             plt.tight_layout()
-            plt.savefig(os.path.join(error_dir, f"{safe_field}_residual_contours.png"))
+            safe_field = (
+                field.replace(" ", "_")
+                .replace("[", "")
+                .replace("]", "")
+                .replace("(", "")
+                .replace(")", "")
+                .replace("/", "_")
+            )
+            error_dir = os.path.join(self.figures_dir, "error_figures")
+            os.makedirs(error_dir, exist_ok=True)
+            plt.savefig(os.path.join(error_dir, f"{safe_field}_comparison.png"))
             plt.close()
+            print(f"Saved comparison plot for {field} to {error_dir}/{safe_field}_comparison.png")
 
-            print(f"✅ Residual plots saved for field '{field}' and case params {target_param}")
-
-
-        
-    def _plot_predicted_only(self, params):
-        self._define_ouput_folders()
-        fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
-                  "Absolute Pressure (Pa)", "Density (kg/m^3)", "Temperature (K)"]
-        for field in fields:
-            self._plot_single_prediction(field, params)
-
-    def _plot_single_prediction(self, field, params):
-        x = self.df_pred["X (m)"].values
-        y = self.df_pred["Y (m)"].values
-        z = self.df_pred[field].values
-        xi, yi = np.meshgrid(np.linspace(x.min(), x.max(), 500), np.linspace(y.min(), y.max(), 500))
-        zi = griddata((x, y), z, (xi, yi), method='cubic')
-
-        a, b = params[0], params[1]
-        x0, y0 = -2.5, 0
-        mask = ((xi - x0)**2 / a**2 + (yi - y0)**2 / b**2) <= 1
-        zi[mask] = np.nan
-
-        fig, ax = plt.subplots(figsize=(6, 6))
-        contour = ax.contourf(xi, yi, zi, levels=100, cmap="inferno")
-        cbar = fig.colorbar(contour)
-        cbar.set_label(f"{field} Color Scale")
-        ax.set_title(f"{field} - Predicted Only")
-        ax.set_xlabel("X (m)")
-        ax.set_ylabel("Y (m)")
-
-        safe_field = field.replace(' ', '_').replace('[', '').replace(']', '')\
-                          .replace('(', '').replace(')', '').replace('/', '_')
-        pred_dir = os.path.join(self.figures_dir, "predictions")
-        os.makedirs(pred_dir, exist_ok=True)
-        plt.savefig(os.path.join(pred_dir, f"{safe_field}_predicted.png"))
-        plt.close()
-        print(f"Saved predicted plot for {field} to {pred_dir}/{safe_field}_predicted.png")
-
-    def plot_point_cloud(self, field, error):
-        """
-        Plot field comparison using raw point data without interpolation
-        """
-        x = self.df_true["X (m)"].values
-        y = self.df_true["Y (m)"].values
-        
-        # Get field values
-        true_values = self.df_true[field].values
-        pred_values = self.df_pred[field].values
-        error_values = error[field].values
-        
-        # Create figure with 3 subplots
-        fig, axs = plt.subplots(1, 3, figsize=(36, 12))
-        
-        # Data for each subplot
-        datasets = [pred_values, true_values, error_values]
-        titles = ["Predicted", "True", "Error"]
-        cmaps = ["inferno", "inferno", "inferno"]
-        
-        # Calculate consistent color scales
-        vmin_tp = min(np.min(true_values), np.min(pred_values))
-        vmax_tp = max(np.max(true_values), np.max(pred_values))
-        
-        vmin_err = np.min(error_values)
-        vmax_err = np.max(error_values)
-        
-        # Create scatter plots
-        for i, (ax, data, title, cmap) in enumerate(zip(axs, datasets, titles, cmaps)):
-            if title == "Error":
-                # Use error color scale
-                scatter = ax.scatter(x, y, c=data, cmap=cmap, s=1, 
-                                vmin=vmin_err, vmax=vmax_err)
-                cbar = fig.colorbar(scatter, ax=ax)
-                cbar.set_label("Error Color Scale")
-            else:
-                # Use true/predicted color scale
-                scatter = ax.scatter(x, y, c=data, cmap=cmap, s=1, 
-                                vmin=vmin_tp, vmax=vmax_tp)
-                cbar = fig.colorbar(scatter, ax=ax)
-                cbar.set_label(f"{field} Color Scale")
+            # # === Histogram Plot ===
+            fig, ax = plt.subplots(figsize=(8, 6))
+            # vals = z_denorm
             
-            cbar.ax.tick_params(labelsize=14)
-            ax.set_title(f"{field} - {title}")
-            ax.set_xlabel("X (m)")
-            ax.set_ylabel("Y (m)")
-            ax.set_aspect('equal')
-        
-        plt.tight_layout()
-        
-        # Save the plot
-        safe_field = field.replace(' ', '_').replace('[', '').replace(']', '')\
-                        .replace('(', '').replace(')', '').replace('/', '_')
-        error_dir = os.path.join(self.figures_dir, "error_figures")
-        os.makedirs(error_dir, exist_ok=True)
-        plt.savefig(os.path.join(error_dir, f"{safe_field}_pointcloud_comparison.png"), dpi=150)
-        plt.close()
-        print(f"Saved point cloud comparison plot for {field} to {error_dir}/{safe_field}_pointcloud_comparison.png")
+
+            # # Use log scale for better spread visualization if needed
+            
+            ax.hist(zi_error, bins=100, color='darkorange', alpha=0.85, edgecolor='black')
+            
+            ax.set_yscale('log')
+            ax.set_xlabel(f"{field}")
+            ax.set_ylabel("Number of Cells")
+            ax.set_title(f"{field} Error Distribution")
+            ax.grid(True, which="both", ls="--", alpha=0.5)
+
+            hist_dir = os.path.join(self.figures_dir,"error_figures", "histograms")
+            os.makedirs(hist_dir, exist_ok=True)
+            plt.tight_layout()
+            plt.savefig(os.path.join(hist_dir, f"{safe_field}_error_histogram.png"))
+            plt.close()
+            print(f"Saved residual histogram for {field} to {hist_dir}/{safe_field}_error_histogram.png")
+
+        if self.model_type == "low_fi_fusion":
+                self._plot_residual_analysis(mask)
+
+    def _plot_residual_analysis(self, mask):
+        residual_path = os.path.join("Outputs", self.project_name, "residual.npz")
+        residual_data = np.load(residual_path, allow_pickle=True)
+
+        outputs       = residual_data["outputs"]        # (num_sims, num_points, num_fields)
+        outputs_mean  = residual_data["outputs_mean"]   # (num_fields,)
+        outputs_std   = residual_data["outputs_std"]    # (num_fields,)
+        params_all    = residual_data["params"]         # (num_sims, num_params)
+        coords_all    = residual_data["coords"]         # (num_sims, num_points, 3)
+        fields        = self.fields
+
+        # Identify which simulation matches this case
+        true_params = self.df_true[self.param_columns].iloc[0].to_numpy()
+        idx = np.where(np.all(np.isclose(params_all, true_params, atol=1e-6), axis=1))[0]
+        if len(idx) == 0:
+            raise ValueError(f"No simulation found in residuals for parameters {true_params}")
+        sim_idx = idx[0]
+
+        # Extract coords and outputs
+        coords = coords_all[sim_idx]
+        x, y = coords[:, 0], coords[:, 1]
+        triang = tri.Triangulation(x, y)
+
+        # Recompute mask using same logic from your plot_fields() method
+        xtri, ytri = x[triang.triangles], y[triang.triangles]
+        edge_lengths = np.sqrt((xtri[:, None, :] - xtri[:, :, None])**2 +
+                            (ytri[:, None, :] - ytri[:, :, None])**2)
+        max_edge = np.max(edge_lengths, axis=(1, 2))
+
+        # Optional: compute distance if your data includes it
+        if "distanceToSurface" in self.df_true.columns:
+            dist = self.df_true["distanceToSurface"].values
+        elif "distanceToEllipse" in self.df_true.columns:
+            dist = self.df_true["distanceToEllipse"].values
+        else:
+            dist = np.zeros_like(x)
+
+        dist_tri = dist[triang.triangles]
+        dist_centroid = dist_tri.mean(axis=1)
+
+        edge_threshold = np.percentile(max_edge, self.edge_percentile)
+        dist_threshold = self.dist_threshold
+        mask_new = (max_edge > edge_threshold) & (dist_centroid < dist_threshold)
+        triang.set_mask(mask_new)
+
+        outputs_sim = outputs[sim_idx]
+
+        # Loop through each field
+        for i, field in enumerate(fields):
+            z_raw = outputs_sim[:, i]
+            z_denorm = z_raw * outputs_std[i] + outputs_mean[i]
+            z_abs = np.abs(z_denorm)
+
+            # Independent normalizations
+            norm_raw = mcolors.Normalize(vmin=np.nanmin(z_raw), vmax=np.nanmax(z_raw))
+            norm_denorm = mcolors.Normalize(vmin=np.nanmin(z_denorm), vmax=np.nanmax(z_denorm))
+            norm_abs = mcolors.Normalize(vmin=np.nanmin(z_abs), vmax=np.nanmax(z_abs))
+
+            # Create contour plots
+            fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+            titles = ["Raw Outputs", "Denormalized Outputs", "Absolute Outputs"]
+            datasets = [z_raw, z_denorm, z_abs]
+            cmaps = ["viridis", "viridis", "inferno"]
+            norms = [norm_raw, norm_denorm, norm_abs]
+
+            for ax, data, title, cmap, norm in zip(axs, datasets, titles, cmaps, norms):
+                contour = ax.tricontourf(triang, data, levels=100, cmap=cmap, norm=norm)
+                cbar = fig.colorbar(contour, ax=ax)
+                cbar.set_label(f"{field} {title} Color Scale")
+                cbar.ax.tick_params(labelsize=12)
+                ax.set_title(f"{field} - {title}")
+                ax.set_xlabel("X (m)")
+                ax.set_ylabel("Y (m)")
+                ax.set_xlim(self.x_lim)
+                ax.set_ylim(self.y_lim)
+
+            plt.tight_layout()
+            safe_field = (
+                field.replace(" ", "_")
+                .replace("[", "")
+                .replace("]", "")
+                .replace("(", "")
+                .replace(")", "")
+                .replace("/", "_")
+            )
+            out_dir = os.path.join(self.figures_dir, "residual_analysis")
+            os.makedirs(out_dir, exist_ok=True)
+            plt.savefig(os.path.join(out_dir, f"{safe_field}_residual_analysis.png"))
+            plt.close()
+            print(f"Saved residual analysis for {field} to {out_dir}/{safe_field}_residual_analysis.png")
+
+            # === Histogram Plot ===
+            fig, ax = plt.subplots(figsize=(8, 6))
+            vals = z_denorm
+            # abs_vals = abs_vals[~np.isnan(abs_vals)]  # remove NaNs
+
+            # Use log scale for better spread visualization if needed
+            # bins = np.logspace(np.log10(max(vals.min(), 1e-6)), np.log10(vals.max()), 60)
+            ax.hist(vals, bins=100, color='darkorange', alpha=0.85, edgecolor='black')
+            # ax.set_xscale('log')
+            ax.set_yscale('log')
+            ax.set_xlabel(f"{field} (Denormalized Residual)")
+            ax.set_ylabel("Number of Cells")
+            ax.set_title(f"{field} – Residual Magnitude Distribution")
+            ax.grid(True, which="both", ls="--", alpha=0.5)
+
+            hist_dir = os.path.join(self.figures_dir, "residual_analysis", "histograms")
+            os.makedirs(hist_dir, exist_ok=True)
+            plt.tight_layout()
+            plt.savefig(os.path.join(hist_dir, f"{safe_field}_residual_histogram.png"))
+            plt.close()
+            print(f"Saved residual histogram for {field} to {hist_dir}/{safe_field}_residual_histogram.png")
+
+        residual_data.close()
+
+
+
+
+    
+
+    
 

@@ -20,7 +20,7 @@ param_columns:
 - b
 param_dim: 2
 print_every: 1
-project_name: dropout_test_lo_fi2
+project_name: dropout_test_lo_fi3
 shuffle: false
 test_size: 0.2
 dropout: 0.3

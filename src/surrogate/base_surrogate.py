@@ -33,6 +33,10 @@ class BaseSurrogate:
         self.loss_type = config["loss_type"]
         self.low_fi_dropout = config.get("low_fi_dropout", 0.0)
         self.dropout = config.get("dropout", 0.0)
+        self.dist_threshold = config.get("dist_threshold", 0.01)
+        self.edge_percentile = config.get("edge_percentile", 99.5)
+        self.x_lim = config.get("x_lim", None)
+        self.y_lim = config.get("y_lim", None)
 
 
         self.project_root = os.path.dirname(

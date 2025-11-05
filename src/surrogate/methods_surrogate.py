@@ -121,7 +121,7 @@ class MethodsSurrogate:
         plt.savefig(os.path.join(fig_dir, self.loss_history_file_name))
         plt.close()
 
-    def _infer_and_validate(self, file, shape):
+    def _infer_and_validate(self, file):
         if self.model_type == "low_fi_fusion":
             stats_path = os.path.join(
             self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
@@ -139,8 +139,8 @@ class MethodsSurrogate:
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
         print(f"Inference complete. Output saved to {self.predicted_output_file}.")
         print("Beginning postprocessing...")
-        postprocess = Postprocess(self.project_name, model_type=self.model_type, params=self.param_columns, path_true=file, path_pred=self.predicted_output_file, param_columns=self.param_columns)
-        postprocess.run(self.dimension, shape)
+        postprocess = Postprocess(config_path=self.config_path, path_true=file, path_pred=self.predicted_output_file)
+        postprocess.run(self.dimension)
     
     def _inference(self, file):
         inference = Inference(self.project_name,config_path=self.config_path, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)

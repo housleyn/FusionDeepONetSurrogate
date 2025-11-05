@@ -23,3 +23,7 @@ print_every: 1
 project_name: orion_hyperparam_sweep_0
 shuffle: true
 test_size: 0.2
+dist_threshold: 6
+edge_percentile: 85
+x_lim: [-3, 5]
+y_lim: [-5, 5]

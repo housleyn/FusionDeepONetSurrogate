@@ -1,6 +1,7 @@
 import pandas as pd
+import yaml
 class BasePostprocess:
-    def __init__(self, project_name, model_type=None, params=None, path_true=None, path_pred=None, param_columns=None):
+    def __init__(self, config_path, path_true=None, path_pred=None):
 
         if path_true is None:
             self.df_true = None
@@ -9,7 +10,15 @@ class BasePostprocess:
         df_pred = pd.read_csv(path_pred)
         self.df_pred = df_pred[["Density (kg/m^3)", "Velocity[i] (m/s)", "Velocity[j] (m/s)", "Velocity[k] (m/s)",
                         "Absolute Pressure (Pa)", "Temperature (K)", "X (m)", "Y (m)", "Z (m)"]]
+        self.fields = ["Velocity[i] (m/s)", "Velocity[j] (m/s)",
+                "Absolute Pressure (Pa)", "Density (kg/m^3)", "Temperature (K)"]
         self.errors = {}
-        self.project_name = project_name
-        self.model_type = model_type
-        self.params = params
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+        self.project_name = config.get("project_name")
+        self.model_type = config.get("model_type")
+        self.dist_threshold = config.get("dist_threshold", 0.01)
+        self.edge_percentile = config.get("edge_percentile", 99.5)
+        self.x_lim = config.get("x_lim", None)
+        self.y_lim = config.get("y_lim", None)
+        self.param_columns = config.get("param_columns", [])

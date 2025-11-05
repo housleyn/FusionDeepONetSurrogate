@@ -24,3 +24,7 @@ print_every: 1
 project_name: double_hf_small
 shuffle: true
 test_size: 0.2
+dist_threshold: .01
+edge_percentile: .001
+x_lim: [-1, 5]
+y_lim: [-2, 2]
