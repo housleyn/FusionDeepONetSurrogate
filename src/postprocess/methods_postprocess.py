@@ -10,7 +10,7 @@ import matplotlib.colors as mcolors
 class MethodsPostprocess:
     def run(self, dimension):
         self._calculate_error()
-        self._define_ouput_folders()
+        self._define_output_folders()
         fields = self.fields
         if dimension == 3:
             fields.insert(2, "Velocity[k] (m/s)")
@@ -21,6 +21,13 @@ class MethodsPostprocess:
         self._create_table()
 
         self.plot_fields()
+
+    def get_errors(self):
+        self._calculate_error()
+        fields = self.fields 
+        for field in fields:
+            self._calculate_relative_l2_error(field)
+        return self.errors.items()
     
     def _calculate_error(self):
         error = np.abs(self.df_true - self.df_pred)
@@ -34,7 +41,7 @@ class MethodsPostprocess:
         rel_l2 = 100 * np.linalg.norm(u_true-u_pred) / np.linalg.norm(u_true)
         self.errors[field] = rel_l2
 
-    def _define_ouput_folders(self):
+    def _define_output_folders(self):
         self.figures_dir = os.path.join("Outputs", self.project_name)
         self.tables_dir = os.path.join("Outputs", self.project_name)
         os.makedirs(self.figures_dir, exist_ok=True)

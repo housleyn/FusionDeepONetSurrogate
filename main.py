@@ -16,6 +16,8 @@ if __name__ == "__main__":
 
     # surrogate = Surrogate(config_path="configs/config_orion_hyperparam_sweep_0.yaml")
     # surrogate._train()
-    surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv")
+    # surrogate._infer_and_validate(file="Data/ellipse_data/ellipse_data_test2.csv")
+    
+    surrogate._infer_all_unseen(folder="Data/unseen_ellipse_data")
     # surrogate._infer_and_validate(file="Data/x_43_unseen/x_43_a21.101756927_a324.59262374_a417.89264438.csv")
     # surrogate._infer_and_validate(file="Data/orion_data/orion_data_AoA0.61354843_Mach17.83834081.csv")
