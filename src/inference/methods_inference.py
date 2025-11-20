@@ -30,8 +30,8 @@ class MethodsInference:
     def _load_stats(self, npz_path):
         data = np.load(npz_path)
         return {
-            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
-            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
+            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32).to(self.device),
+            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32).to(self.device),
         }
 
     def _denormalize(self, output):

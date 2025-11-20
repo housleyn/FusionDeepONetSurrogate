@@ -205,10 +205,9 @@ class MethodsSurrogate:
             plt.figure(figsize=(8, 5))
             plt.scatter(x, y, s=80, color=colors[idx % len(colors)], edgecolors='black', alpha=0.8,
                         label=f"avg = {avg:.2f}%")
-            plt.xticks(x, [f"Inference {i}" for i in x])
             plt.xlabel("Inferences")
             plt.ylabel("Relative L2 Error (%)")
-            plt.title(f"Relative L2 Error per Inference — {field}")
+            
             plt.grid(True, linestyle="--", alpha=0.6)
             plt.legend( fontsize=9, title_fontsize=10)
 
@@ -230,7 +229,7 @@ class MethodsSurrogate:
             plt.scatter(x, y, s=70, color=colors[idx % len(colors)], edgecolors='black',
                         alpha=0.8, label=f"{field} (avg = {avg:.2f}%)")
 
-        plt.xticks(x, [f"Inference {i}" for i in x])
+        plt.xticks(x, x+1)
         plt.xlabel("Inferences")
         plt.ylabel("Relative L2 Error (%)")
         plt.title("All Fields")

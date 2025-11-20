@@ -1,11 +1,10 @@
 from matplotlib.ticker import MaxNLocator
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
 import os
 import matplotlib.tri as tri
 import matplotlib.colors as mcolors
+from scipy.spatial import cKDTree
 
 class MethodsPostprocess:
     def run(self, dimension):
@@ -21,6 +20,13 @@ class MethodsPostprocess:
         self._create_table()
 
         self.plot_fields()
+        surface_metrics = self.compute_surface_percent_differences()
+
+        self._create_surface_metrics_table(
+            metrics=surface_metrics,
+            save_path=os.path.join(self.tables_dir, "surface_metric_errors.png")
+        )
+
 
     def get_errors(self):
         self._calculate_error()
@@ -171,10 +177,23 @@ class MethodsPostprocess:
             plt.close()
             print(f"Saved residual histogram for {field} to {hist_dir}/{safe_field}_error_histogram.png")
 
-        if self.model_type == "low_fi_fusion":
-                self._plot_residual_analysis(mask)
+            # Percent error histogram
+            zi_percent_error = np.abs((zi_error) / (zi_true + 1e-8)) * 100
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax.hist(zi_percent_error, bins=200, color='steelblue', alpha=0.8, edgecolor='black')
+            ax.set_yscale('log')
+            ax.set_xlabel(f"{field} Percent Error (%)")
+            ax.set_ylabel("Number of Cells")
+            ax.set_title(f"{field} Percent Error Distribution")
+            ax.grid(True, which="both", ls="--", alpha=0.5)
+            plt.tight_layout()
+            plt.savefig(os.path.join(hist_dir, f"{safe_field}_percent_error_histogram.png"))
+            plt.close()
 
-    def _plot_residual_analysis(self, mask):
+        if self.model_type == "low_fi_fusion":
+                self._plot_residual_analysis()
+
+    def _plot_residual_analysis(self):
         residual_path = os.path.join("Outputs", self.project_name, "residual.npz")
         residual_data = np.load(residual_path, allow_pickle=True)
 
@@ -211,7 +230,14 @@ class MethodsPostprocess:
         else:
             dist = np.zeros_like(x)
 
-        dist_tri = dist[triang.triangles]
+        # Handle out-of-bounds indices gracefully
+        try:
+            dist_tri = dist[triang.triangles]
+        except IndexError:
+            # If indices are out of bounds, clip them to valid range
+            max_idx = len(dist) - 1
+            safe_triangles = np.clip(triang.triangles, 0, max_idx)
+            dist_tri = dist[safe_triangles]
         dist_centroid = dist_tri.mean(axis=1)
 
         edge_threshold = np.percentile(max_edge, self.edge_percentile)
@@ -236,7 +262,7 @@ class MethodsPostprocess:
             fig, axs = plt.subplots(1, 3, figsize=(18, 6))
             titles = ["Raw Outputs", "Denormalized Outputs", "Absolute Outputs"]
             datasets = [z_raw, z_denorm, z_abs]
-            cmaps = ["viridis", "viridis", "inferno"]
+            cmaps = ["inferno", "inferno", "inferno"]
             norms = [norm_raw, norm_denorm, norm_abs]
 
             for ax, data, title, cmap, norm in zip(axs, datasets, titles, cmaps, norms):
@@ -288,6 +314,151 @@ class MethodsPostprocess:
             print(f"Saved residual histogram for {field} to {hist_dir}/{safe_field}_residual_histogram.png")
 
         residual_data.close()
+    def compute_surface_percent_differences(
+        self,
+        area_threshold=1e100,
+        coef_eps=1e-12,
+    ):
+        """
+        Compute percent difference in CD, CL, and wall temperature
+        (using area-weighted temperature proxy).
+        
+        - Surface cells: is_on_surface == 1 AND area normal < threshold
+        - CD/CL: pressure * area vector integrations
+        - Heat: sum(T * |A|) comparison
+        """
+
+        # --- Basic checks ---
+        if self.df_true is None:
+            raise ValueError("df_true is None; surface metrics require true data.")
+        if self.df_pred is None:
+            raise ValueError("df_pred is None; surface metrics require predicted data.")
+
+        required_cols_true = [
+            "Absolute Pressure (Pa)",
+            "Temperature (K)",
+            "X (m)", "Y (m)", "Z (m)",
+            "is_on_surface",
+            "Area[i] (m^2)", "Area[j] (m^2)", "Area[k] (m^2)",
+        ]
+        for col in required_cols_true:
+            if col not in self.df_true.columns:
+                raise ValueError(f"True data missing required column: {col}")
+
+        required_cols_pred = [
+            "Absolute Pressure (Pa)",
+            "Temperature (K)",
+        ]
+        for col in required_cols_pred:
+            if col not in self.df_pred.columns:
+                raise ValueError(f"Predicted data missing column: {col}")
+
+        # --- Surface mask from normals ---
+        area_vec_all = self.df_true[
+            ["Area[i] (m^2)", "Area[j] (m^2)", "Area[k] (m^2)"]
+        ].to_numpy()
+        area_norm_all = np.linalg.norm(area_vec_all, axis=1)
+
+        is_surface = (self.df_true["is_on_surface"] == 1)
+        valid_area = (
+            np.isfinite(area_norm_all)
+            & (area_norm_all > 0.0)
+            & (area_norm_all < area_threshold)
+        )
+        surface_mask = is_surface & valid_area
+
+        if not np.any(surface_mask):
+            raise ValueError("No valid surface cells found.")
+
+        # --- Extract surface values ---
+        p_true_s = self.df_true["Absolute Pressure (Pa)"].to_numpy()[surface_mask]
+        p_pred_s = self.df_pred["Absolute Pressure (Pa)"].to_numpy()[surface_mask]
+
+        T_true_s = self.df_true["Temperature (K)"].to_numpy()[surface_mask]
+        T_pred_s = self.df_pred["Temperature (K)"].to_numpy()[surface_mask]
+
+        A_vec_s = area_vec_all[surface_mask]
+        A_norm_s = area_norm_all[surface_mask]
+
+        # --- Directions for Cd/Cl ---
+        if "AoA" in self.df_true.columns:
+            aoa_deg = float(self.df_true["AoA"].iloc[0])
+        else:
+            aoa_deg = 0.0
+
+        aoa_rad = np.deg2rad(aoa_deg)
+        e_inf = np.array([np.cos(aoa_rad), 0, np.sin(aoa_rad)])
+        e_inf /= (np.linalg.norm(e_inf) + 1e-15)
+
+        e_drag = e_inf
+        e_lift = np.array([-np.sin(aoa_rad), 0, np.cos(aoa_rad)])
+        e_lift /= (np.linalg.norm(e_lift) + 1e-15)
+
+        # --- Integrate forces ---
+        F_true = -np.sum(p_true_s[:, None] * A_vec_s, axis=0)
+        F_pred = -np.sum(p_pred_s[:, None] * A_vec_s, axis=0)
+
+        Cd_true = float(np.dot(F_true, e_drag))
+        Cd_pred = float(np.dot(F_pred, e_drag))
+        Cl_true = float(np.dot(F_true, e_lift))
+        Cl_pred = float(np.dot(F_pred, e_lift))
+
+        def percent_diff(pred, true):
+            return float(np.abs(pred - true) / (np.abs(true) + coef_eps) * 100)
+
+        Cd_percent = percent_diff(Cd_pred, Cd_true)
+        Cl_percent = percent_diff(Cl_pred, Cl_true)
+
+        # --- Wall Temperature Proxy (NO gradients) ---
+        Q_true = float(np.sum(T_true_s * A_norm_s))
+        Q_pred = float(np.sum(T_pred_s * A_norm_s))
+        Heat_percent = percent_diff(Q_pred, Q_true)
+
+        return {
+            "Cd_percent_diff": Cd_percent,
+            "Cl_percent_diff": Cl_percent,
+            "Heat_percent_diff": Heat_percent,
+            "Cd_true_proxy": Cd_true,
+            "Cd_pred_proxy": Cd_pred,
+            "Cl_true_proxy": Cl_true,
+            "Cl_pred_proxy": Cl_pred,
+            "Q_true_proxy": Q_true,
+            "Q_pred_proxy": Q_pred,
+            "num_surface_cells": int(surface_mask.sum()),
+        }
+
+    
+    def _create_surface_metrics_table(self, metrics: dict, save_path: str):
+        """
+        Table image reporting Cd, Cl, and Wall Temperature % errors.
+        """
+
+        import matplotlib.pyplot as plt
+
+        Cd_percent = metrics.get("Cd_percent_diff", None)
+        Cl_percent = metrics.get("Cl_percent_diff", None)
+        Heat_percent = metrics.get("Heat_percent_diff", None)
+
+        table_data = [
+            ["Metric", "Percent Error (%)"],
+            ["Cd Error", f"{Cd_percent:.2f}"],
+            ["Cl Error", f"{Cl_percent:.2f}"],
+            ["Wall Temperature Error", f"{Heat_percent:.2f}"],
+        ]
+
+        fig, ax = plt.subplots(figsize=(10, 2))
+        ax.axis("off")
+
+        table = ax.table(cellText=table_data, loc="center", cellLoc="center")
+        table.auto_set_font_size(False)
+        table.set_fontsize(12)
+
+        
+
+        table.scale(1, 2)
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
 
 
 

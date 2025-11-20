@@ -32,8 +32,11 @@ class BaseInference:
                 "Outputs", project_name, "residual.npz"
             )
             self.model_1, self.model_2 = self._load_model(model_path, stats_path)
+            self.model_1 = self.model_1.to(self.device)
+            self.model_2 = self.model_2.to(self.device)
         else:
             self.model = self._load_model(model_path, stats_path)
+            self.model = self.model.to(self.device)
         self.low_fi_stats = self._load_stats(low_fi_stats_path) if low_fi_stats_path else None
         self.stats = self._load_stats(stats_path)
         self.residual_stats = self._load_stats(residual_stats_path) if self.model_type == "low_fi_fusion" else None
@@ -41,3 +44,4 @@ class BaseInference:
         outputs_dir = os.path.join(project_root, "Outputs")
         self.out_path = os.path.join(outputs_dir, "predicted_output.csv")
         self.project_name = project_name
+       
