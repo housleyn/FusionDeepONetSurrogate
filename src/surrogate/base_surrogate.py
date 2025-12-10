@@ -2,7 +2,7 @@ import torch
 import os
 import yaml
 class BaseSurrogate:
-    def __init__(self, config_path):
+    def __init__(self, config_path, ddp_info=None):
         self.config_path = config_path
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
@@ -53,7 +53,12 @@ class BaseSurrogate:
         self.low_fi_output_path = os.path.join(
             self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
         )
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.ddp_info = ddp_info or {"is_ddp": False, "rank": 0, "local_rank": 0, "world_size": 1}
+        if self.ddp_info.get("is_ddp") and torch.cuda.is_available():
+            self.device = torch.device(f"cuda:{self.ddp_info.get('local_rank', 0)}")
+        else:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.rank = self.ddp_info.get("rank", 0)
         if self.model_type == "low_fi_fusion":
             self.low_fi_model_path = f"Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"

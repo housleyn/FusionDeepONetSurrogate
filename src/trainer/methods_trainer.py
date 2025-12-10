@@ -1,16 +1,21 @@
 import torch
 import os
+from src.utils.distributed import is_main_process
 
 class MethodsTrainer:
     def train(self, train_loader, test_loader, num_epochs, print_every):
         loss_history, test_loss_history = [], []
         best_loss = float('inf')
-        os.makedirs(f'Outputs/{self.project_name}/checkpoints', exist_ok=True)
+        if is_main_process():
+            os.makedirs(f'Outputs/{self.project_name}/checkpoints', exist_ok=True)
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
             self.model.train()
             total_samples = 0
+
+            if self.train_sampler is not None:
+                self.train_sampler.set_epoch(epoch)
 
             for coords, params, targets, sdf, *maybe_aux in train_loader:
                 coords = coords.to(self.device)
@@ -48,17 +53,17 @@ class MethodsTrainer:
             # Checkpoint: Save best model
             if test_loss < best_loss:
                 best_loss = test_loss
-                checkpoint = {
-                    'epoch': epoch,
-                    'model_state_dict': self.model.state_dict(),
-                    'optimizer_state_dict': self.optimizer.state_dict(),
-                    'scheduler_state_dict': self.lr_scheduler.state_dict(),
-                    'loss': test_loss
-                }
-                torch.save(checkpoint, f'Outputs/{self.project_name}/checkpoints/best_model.pt')
-
-            if epoch % print_every == 0 or epoch == num_epochs - 1:
-                print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e}")
+                if is_main_process():
+                    checkpoint = {
+                        'epoch': epoch,
+                        'model_state_dict': self.model.state_dict(),
+                        'optimizer_state_dict': self.optimizer.state_dict(),
+                        'scheduler_state_dict': self.lr_scheduler.state_dict(),
+                        'loss': test_loss
+                    }
+                    torch.save(checkpoint, f'Outputs/{self.project_name}/checkpoints/best_model.pt')
+            if is_main_process() and (epoch % print_every == 0 or epoch == num_epochs - 1):
+                    print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e}")
 
         return loss_history, test_loss_history
 
@@ -86,6 +91,8 @@ class MethodsTrainer:
         return total_loss / total_samples
 
     def save_model(self, path=None, low_fi=False):
+        if not is_main_process():
+            return
         if path is None:
             os.makedirs(f'Outputs/{self.project_name}/model', exist_ok=True)
             if low_fi:

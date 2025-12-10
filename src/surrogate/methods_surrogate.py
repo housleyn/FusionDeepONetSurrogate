@@ -11,6 +11,9 @@ import torch
 import numpy as np
 import os
 import glob
+from src.utils.distributed import is_main_process 
+import torch.distributed as dist 
+
 
 class MethodsSurrogate:
     
@@ -27,27 +30,30 @@ class MethodsSurrogate:
         if self.model_type == "low_fi_fusion":
             preprocess_low_fi = Preprocess(files=self.low_fi_files ,dimension=self.dimension, output_path=self.low_fi_output_path, param_columns=self.param_columns, distance_columns=self.distance_columns, lhs_sample=self.lhs_sample)
             preprocess_low_fi.run_all()
-        print("Data preprocessing complete.")
+        if is_main_process():
+            print("Data preprocessing complete.")
 
     def _load_data(self):
         data = Data(self.npz_path)
-        self.train_loader, self.test_loader = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+        self.train_loader, self.test_loader, self.train_sampler = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, ddp=dist.is_initialized(), world_size=self.ddp_info.get("world_size",1), rank=self.ddp_info.get("rank",0))
         
         if self.model_type == "low_fi_fusion" and self.low_fi_output_path:
             data_low_fi = Data(self.low_fi_output_path)
-            self.train_loader_low_fi, self.test_loader_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+            self.train_loader_low_fi, self.test_loader_low_fi, self.train_sampler_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, ddp=dist.is_initialized(), world_size=self.ddp_info.get("world_size",1), rank=self.ddp_info.get("rank",0))
         else:
-            self.train_loader_low_fi, self.test_loader_low_fi = None, None
-            
-        print("Data loaded in dataloader.")
+            self.train_loader_low_fi, self.test_loader_low_fi, self.train_sampler_low_fi = None, None, None
+        if is_main_process():    
+            print("Data loaded in dataloader.")
 
     def _create_model(self):
 
         if self.model_type == "vanilla":
-            print("Using Vanilla DeepONet model.")
+            if is_main_process():
+                print("Using Vanilla DeepONet model.")
             self.model = VanillaDeepONet(self.coord_dim, self.param_dim, self.hidden_size, self.num_hidden_layers, self.output_dim)
         if self.model_type == "FusionDeepONet":
-            print("Using Fusion DeepONet model.")
+            if is_main_process():
+                print("Using Fusion DeepONet model.")
             self.model = FusionDeepONet(
                 coord_dim=self.coord_dim + self.distance_dim,
                 param_dim=self.param_dim,
@@ -56,7 +62,8 @@ class MethodsSurrogate:
                 out_dim=self.output_dim
             )
         if self.model_type == "low_fi_fusion":
-            print("Using Low Fidelity Fusion DeepONet model.")
+            if is_main_process():
+                print("Using Low Fidelity Fusion DeepONet model.")
             self.model = Low_Fidelity_FusionDeepONet(
                 coord_dim=self.coord_dim + self.distance_dim,
                 param_dim=self.param_dim,
@@ -66,21 +73,28 @@ class MethodsSurrogate:
                 npz_path=self.low_fi_output_path,
                 dropout=self.low_fi_dropout
             )
+        self.model = self.model.to(self.device)
+        if dist.is_initialized():
+            self.model = torch.nn.parallel.DistributedDataPrallel(self.model, device_ids=[self.ddp_info.get("local_rank", 0)] if torch.cuda.is_available() else None,
+                output_device=self.ddp_info.get("local_rank", 0) if torch.cuda.is_available() else None,
+            )
 
     def _train_model(self):
         if self.model_type == "low_fi_fusion":
-            trainer_low_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader_low_fi, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+            trainer_low_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader_low_fi, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type, train_sampler=self.train_sampler_low_fi)
             self.loss_history, self.test_loss_history = trainer_low_fi.train(self.train_loader_low_fi, self.test_loader_low_fi, self.num_epochs, print_every=self.print_every)
             trainer_low_fi.save_model(low_fi=True)
-            self._plot_loss_history(low_fidelity=True)
-            print("Training low_fidelity complete. Loss history and model saved.")
-            print("Evaluating low_fidelity model on high_fidelity data...")
+            if is_main_process():
+                self._plot_loss_history(low_fidelity=True)
+                print("Training low_fidelity complete. Loss history and model saved.")
+                print("Evaluating low_fidelity model on high_fidelity data...")
             
             residual_npz = os.path.join(self.project_root, "Outputs", self.project_name, "residual.npz")
             self._make_residual_dataset(hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
             residual = Data(residual_npz)
-            res_train_loader, res_test_loader = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
-            print("Residual dataset created and loaded.")
+            res_train_loader, res_test_loader, res_train_sampler = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, ddp=dist.is_initialized(), world_size=self.ddp_info.get("world_size",1), rank=self.ddp_info.get("rank",0))
+            if is_main_process():
+                print("Residual dataset created and loaded.")
             self.model = FusionDeepONet(
                 coord_dim=self.coord_dim + self.distance_dim,
                 param_dim=self.param_dim,
@@ -90,18 +104,24 @@ class MethodsSurrogate:
                 aux_dim=self.output_dim,
                 dropout=self.dropout
             ).to(self.device)
-            trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+            if dist.is_initialized():
+                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[self.ddp_info.get("local_rank", 0)] if torch.cuda.is_available() else None,
+                    output_device=self.ddp_info.get("local_rank", 0) if torch.cuda.is_available() else None,
+                )
+            trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type, train_sampler=res_train_sampler)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
             trainer_hi_fi.save_model()
-            self._plot_loss_history()
-            print("Training high_fidelity complete. Loss history and model saved.")
+            if is_main_process():
+                self._plot_loss_history()
+                print("Training high_fidelity complete. Loss history and model saved.")
         else:
-            trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+            trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type, train_sampler=self.train_sampler)
             self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
             trainer.save_model()
-            self._plot_loss_history()
-            print("Training complete. Loss history and model saved.")
-    
+            if is_main_process():
+                self._plot_loss_history()
+                print("Training complete. Loss history and model saved.")
+
     def _plot_loss_history(self, low_fidelity=False):
         plt.plot(self.loss_history, label='Training Loss')
         plt.plot(self.test_loss_history, label='Testing Loss')
@@ -137,8 +157,9 @@ class MethodsSurrogate:
         params = params_np[1]
         output = inference.predict(coords_np, params, sdf_np)
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
-        print(f"Inference complete. Output saved to {self.predicted_output_file}.")
-        print("Beginning postprocessing...")
+        if is_main_process():
+            print(f"Inference complete. Output saved to {self.predicted_output_file}.")
+            print("Beginning postprocessing...")
         postprocess = Postprocess(config_path=self.config_path, path_true=file, path_pred=self.predicted_output_file)
         postprocess.run(self.dimension)
     
@@ -148,8 +169,9 @@ class MethodsSurrogate:
         params = params_np[1]
         output = inference.predict(coords_np, params)
         inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
-        print(f"Inference complete. Output saved to {self.predicted_output_file}.")
-        print("Beginning postprocessing...")
+        if is_main_process():
+            print(f"Inference complete. Output saved to {self.predicted_output_file}.")
+            print("Beginning postprocessing...")
         postprocess = Postprocess(self.project_name, path_true=None, path_pred=self.predicted_output_file, param_columns=self.param_columns)
         postprocess._plot_predicted_only(params)
     
@@ -173,7 +195,8 @@ class MethodsSurrogate:
             output = inference.predict(coords_np, params, sdf_np)
             predicted_output = os.path.join(self.project_root, "Outputs", self.project_name,"all_inferences", "predicted_"+filename)
             inference.save_to_csv(coords_np, output, out_path=predicted_output)
-            print(f"Inference complete. Output saved to {predicted_output}.")
+            if is_main_process():
+                print(f"Inference complete. Output saved to {predicted_output}.")
             postprocess = Postprocess(config_path=self.config_path, path_true=file_path, path_pred=predicted_output)
             file_errors = dict(postprocess.get_errors())
             errors.append(file_errors)
