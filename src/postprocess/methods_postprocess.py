@@ -5,6 +5,7 @@ import os
 import matplotlib.tri as tri
 import matplotlib.colors as mcolors
 from scipy.spatial import cKDTree
+import pandas as pd
 
 class MethodsPostprocess:
     def run(self, dimension):
@@ -77,29 +78,34 @@ class MethodsPostprocess:
             dist_col = self.df_true["distanceToEllipse"].values
         else:
             raise ValueError("Neither 'distanceToSurface' nor 'distanceToEllipse' column found in the dataset")
+        iscol = "is_on_surface"
+        ax_col, ay_col, az_col = "Area[i] (m^2)", "Area[j] (m^2)", "Area[k] (m^2)"
+
+        for col in (ax_col, ay_col, az_col):
+            vals = self.df_true[col].values
+            bad = np.abs(vals) > 1e6
+            self.df_true.loc[bad, col] = np.nan
 
         x, y = x_col, y_col
-        dist = dist_col
-        triang = tri.Triangulation(x,y)
+        is_surface = (pd.to_numeric(self.df_true[iscol], errors="coerce").fillna(0).astype(int).to_numpy().astype(bool))
+        triangles = tri.Triangulation(x,y)
+        surf_tri_mask = is_surface[triangles.triangles].any(axis=1)
 
-        xtri, ytri = x[triang.triangles], y[triang.triangles]
-        edge_lengths = np.sqrt((xtri[:, None, :] - xtri[:, :, None])**2 +
-                       (ytri[:, None, :] - ytri[:, :, None])**2)
         
-        max_edge = np.max(edge_lengths, axis=(1,2))
-        dist_tri = dist[triang.triangles]
-        dist_centroid = dist_tri.mean(axis=1)
 
-        edge_threshold = np.percentile(max_edge, self.edge_percentile)
-        dist_threshold = self.dist_threshold
-
-        mask = (max_edge > edge_threshold) & (dist_centroid < dist_threshold)
-        triang.set_mask(mask)
+        
 
         for field in self.fields:
             zi_true = self.df_true[field].values
             zi_pred = self.df_pred[field].values
             zi_error = self.error[field].values
+
+            node_invalid = ~np.isfinite(zi_true)
+            field_tri_mask = node_invalid[triangles.triangles].any(axis=1)
+
+            combined_mask = surf_tri_mask | field_tri_mask
+            triangles.set_mask(combined_mask)
+            
 
             # shared normalization for predicted and true
             vmin_tp = np.nanmin([zi_true, zi_pred])
@@ -123,7 +129,7 @@ class MethodsPostprocess:
             for ax, data, title, cmap, norm in zip(axs, datasets, titles, cmaps, norms):
                 if title == "Error":
                     levels = 100
-                contour = ax.tricontourf(triang, data, levels=levels, cmap=cmap, norm=norm)
+                contour = ax.tricontourf(triangles, data, levels=levels, cmap=cmap, norm=norm)
                 cbar = fig.colorbar(contour, ax=ax)
 
                 locator = MaxNLocator(nbins=8, prune=None)
@@ -208,50 +214,51 @@ class MethodsPostprocess:
         true_params = self.df_true[self.param_columns].iloc[0].to_numpy()
         idx = np.where(np.all(np.isclose(params_all, true_params, atol=1e-6), axis=1))[0]
         if len(idx) == 0:
-            raise ValueError(f"No simulation found in residuals for parameters {true_params}")
+            # optional debug print:
+            print(f"[Residual analysis] No simulation found in residuals for parameters {true_params}")
+            residual_data.close()  
+            return  
         sim_idx = idx[0]
 
-        # Extract coords and outputs
+        iscol = "is_on_surface"
+        ax_col, ay_col, az_col = "Area[i] (m^2)", "Area[j] (m^2)", "Area[k] (m^2)"
+
+        for col in (ax_col, ay_col, az_col):
+            vals = self.df_true[col].values
+            bad = np.abs(vals) > 1e6
+            self.df_true.loc[bad, col] = np.nan
+
         coords = coords_all[sim_idx]
-        x, y = coords[:, 0], coords[:, 1]
-        triang = tri.Triangulation(x, y)
-
-        # Recompute mask using same logic from your plot_fields() method
-        xtri, ytri = x[triang.triangles], y[triang.triangles]
-        edge_lengths = np.sqrt((xtri[:, None, :] - xtri[:, :, None])**2 +
-                            (ytri[:, None, :] - ytri[:, :, None])**2)
-        max_edge = np.max(edge_lengths, axis=(1, 2))
-
-        # Optional: compute distance if your data includes it
-        if "distanceToSurface" in self.df_true.columns:
-            dist = self.df_true["distanceToSurface"].values
-        elif "distanceToEllipse" in self.df_true.columns:
-            dist = self.df_true["distanceToEllipse"].values
-        else:
-            dist = np.zeros_like(x)
-
-        # Handle out-of-bounds indices gracefully
-        try:
-            dist_tri = dist[triang.triangles]
-        except IndexError:
-            # If indices are out of bounds, clip them to valid range
-            max_idx = len(dist) - 1
-            safe_triangles = np.clip(triang.triangles, 0, max_idx)
-            dist_tri = dist[safe_triangles]
-        dist_centroid = dist_tri.mean(axis=1)
-
-        edge_threshold = np.percentile(max_edge, self.edge_percentile)
-        dist_threshold = self.dist_threshold
-        mask_new = (max_edge > edge_threshold) & (dist_centroid < dist_threshold)
-        triang.set_mask(mask_new)
-
+        x_res = coords[:, 0]
+        y_res = coords[:, 1]
         outputs_sim = outputs[sim_idx]
+
+
+        # build is_surface_res from df_true
+        x_true = self.df_true["X (m)"].values
+        y_true = self.df_true["Y (m)"].values
+        is_surface_true = self.df_true["is_on_surface"].astype(bool).values
+
+        true_xy = np.column_stack([x_true, y_true])
+        res_xy  = np.column_stack([x_res, y_res])
+
+        tree = cKDTree(true_xy)
+        dist, nn_idx = tree.query(res_xy, k=1)
+        is_surface_res = is_surface_true[nn_idx]
+
+        triang = tri.Triangulation(x_res, y_res)
+        base_geom_mask = is_surface_res[triang.triangles].any(axis=1)
 
         # Loop through each field
         for i, field in enumerate(fields):
             z_raw = outputs_sim[:, i]
             z_denorm = z_raw * outputs_std[i] + outputs_mean[i]
             z_abs = np.abs(z_denorm)
+
+            node_invalid = ~(np.isfinite(z_raw) & np.isfinite(z_denorm) & np.isfinite(z_abs))
+            field_tri_mask = node_invalid[triang.triangles].any(axis=1)
+            combined_mask = base_geom_mask | field_tri_mask
+            triang.set_mask(combined_mask)
 
             # Independent normalizations
             norm_raw = mcolors.Normalize(vmin=np.nanmin(z_raw), vmax=np.nanmax(z_raw))
@@ -314,6 +321,7 @@ class MethodsPostprocess:
             print(f"Saved residual histogram for {field} to {hist_dir}/{safe_field}_residual_histogram.png")
 
         residual_data.close()
+
     def compute_surface_percent_differences(
         self,
         area_threshold=1e100,
