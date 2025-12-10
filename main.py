@@ -7,6 +7,10 @@ if __name__ == "__main__":
 
 
     ddp_info = setup_ddp()
+    if ddp_info["is_ddp"]:
+        print(f"DDP Initialized | world_size={ddp_info['world_size']} | "
+            f"rank={ddp_info['rank']} | local_rank={ddp_info['local_rank']}",
+            flush=True)
     try:
         
         parallel_test = Surrogate(config_path="configs/parallel_test.yaml", ddp_info=ddp_info)

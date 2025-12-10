@@ -34,6 +34,7 @@ def setup_ddp():
     if not dist.is_initialized():
         dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
+
     return {"is_ddp": True, "rank": rank, "local_rank": local_rank, "world_size": world_size, "device": device}
 
 
