@@ -75,7 +75,7 @@ class MethodsSurrogate:
             )
         self.model = self.model.to(self.device)
         if dist.is_initialized():
-            self.model = torch.nn.parallel.DistributedDataPrallel(self.model, device_ids=[self.ddp_info.get("local_rank", 0)] if torch.cuda.is_available() else None,
+            self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[self.ddp_info.get("local_rank", 0)] if torch.cuda.is_available() else None,
                 output_device=self.ddp_info.get("local_rank", 0) if torch.cuda.is_available() else None,
             )
 
