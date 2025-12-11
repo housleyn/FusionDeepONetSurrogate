@@ -3,6 +3,9 @@ import numpy as np
 from scipy.stats import qmc 
 from sklearn.neighbors import NearestNeighbors
 from scipy.spatial import KDTree
+import torch.distributed as dist
+from src.utils.distributed import is_main_process
+
 
 class MethodsPreprocess:
     def load_data(self):
@@ -153,19 +156,36 @@ class MethodsPreprocess:
 
         )
 
-    def run_all(self):
-        self.load_and_pad()
-        print("saving preprocessed data to", self.output_path)
-        self.save()
-    def run_all_low_fi(self):
-        self.load_and_pad()
-        print("saving preprocessed low fidelity data to", self.output_path)
-        self.save()
+    def run_all(self, overwrite=False):
+        do_work = False 
+        if is_main_process():
+            if overwrite or not self.output_path.exists():
+                self.load_and_pad()
+                print("saving preprocessed data to", self.output_path)
+                self.save()
+                do_work = True
+            else:
+                print(f"Preprocessed file {self.output_path} already exists. Skipping preprocessing.")
+        self._dist_barrier()
+
+    def run_all_low_fi(self, overwrite=False):
+        do_work = False
+        if is_main_process():
+            if overwrite or not self.output_path.exists():
+                self.load_and_pad()
+                print("saving preprocessed low fidelity data to", self.output_path)
+                self.save()
+                do_work = True
+            else:
+                print(f"Preprocessed file {self.output_path} already exists. Skipping preprocessing.")
+        self._dist_barrier()
 
     def _normalize(self, data):
         mean = np.mean(data, axis=0)
         std = np.std(data, axis=0)
         std[std == 0] = 1  
         return (data - mean) / std, mean, std
-
     
+    def _dist_barrier(self):
+        if dist.is_available() and dist.is_initialized():
+            dist.barrier()

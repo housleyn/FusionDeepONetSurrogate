@@ -90,7 +90,10 @@ class MethodsSurrogate:
                 print("Evaluating low_fidelity model on high_fidelity data...")
             
             residual_npz = os.path.join(self.project_root, "Outputs", self.project_name, "residual.npz")
-            self._make_residual_dataset(hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
+            if is_main_process():
+                self._make_residual_dataset(hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
+            if dist.is_available() and dist.is_initialized():
+                dist.barrier()
             residual = Data(residual_npz)
             res_train_loader, res_test_loader, res_train_sampler = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, ddp=dist.is_initialized(), world_size=self.ddp_info.get("world_size",1), rank=self.ddp_info.get("rank",0))
             if is_main_process():
@@ -142,6 +145,8 @@ class MethodsSurrogate:
         plt.close()
 
     def _infer_and_validate(self, file):
+        if dist.is_available() and dist.is_initialized() and not is_main_process():
+            return
         if self.model_type == "low_fi_fusion":
             stats_path = os.path.join(
             self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
@@ -164,6 +169,8 @@ class MethodsSurrogate:
         postprocess.run(self.dimension)
     
     def _inference(self, file):
+        if dist.is_available() and dist.is_initialized() and not is_main_process():
+            return
         inference = Inference(self.project_name,config_path=self.config_path, model_path=self.model_path, stats_path=self.npz_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
         coords_np, params_np, sdf_np = inference.load_csv_input(file)
         params = params_np[1]
@@ -176,6 +183,8 @@ class MethodsSurrogate:
         postprocess._plot_predicted_only(params)
     
     def _infer_all_unseen(self, folder):
+        if dist.is_available() and dist.is_initialized() and not is_main_process():
+            return
         errors = []
         for filename in os.listdir(folder):
             file_path = os.path.join(folder, filename)
@@ -280,6 +289,8 @@ class MethodsSurrogate:
     
 
     def _make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_path):
+        data_hf = Data(high_fi_stats_path)
+        hf_train_loader, hf_test_loader, _ = data_hf.get_dataloader(self.batch_size, shuffle=False, test_size=self.test_size, ddp=False, world_size=1, rank=0)
         hf_train_loader = self.train_loader
         hf_test_loader  = self.test_loader
 
@@ -298,7 +309,10 @@ class MethodsSurrogate:
             out_dim=self.output_dim,
             npz_path=self.low_fi_output_path
         ).to(self.device)
-        lf_model.load_state_dict(torch.load(self.low_fi_model_path, map_location=self.device))
+        state = torch.load(self.low_fi_model_path, map_location=self.device)
+        if any(k.startswith("module.") for k in state.keys()):
+            state = {k[len("module."):]: v for k, v in state.items()}
+        lf_model.load_state_dict(state)
         lf_model.eval()
 
         # --- Accumulators ---
