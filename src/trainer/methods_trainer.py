@@ -69,7 +69,7 @@ class MethodsTrainer:
             epoch_time = time.time() - epoch_start
             epoch_times.append(epoch_time)
             if is_main_process() and (epoch % print_every == 0 or epoch == num_epochs - 1):
-                    print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e} | epoch Time: {epoch_time:.2f}s | Avg epoch Time: {sum(epoch_times)/len(epoch_times):.2f}s")
+                    print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e} | epoch Time: {epoch_time:.6f}s | Avg epoch Time: {sum(epoch_times)/len(epoch_times):.6f}s")
 
         return loss_history, test_loss_history
 
@@ -108,11 +108,12 @@ class MethodsTrainer:
         torch.save(self.model.state_dict(), path)
 
     def load_model(self, path):
-        self.model.load_state_dict(torch.load(path))
+        self.model.load_state_dict(torch.load(path, map_location=self.device))
+
         self.model.eval()
 
     def load_checkpoint(self, path):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.lr_scheduler.load_state_dict(checkpoint['scheduler_state_dict'])

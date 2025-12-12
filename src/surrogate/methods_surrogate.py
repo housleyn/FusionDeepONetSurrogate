@@ -44,6 +44,8 @@ class MethodsSurrogate:
             self.train_loader_low_fi, self.test_loader_low_fi, self.train_sampler_low_fi = None, None, None
         if is_main_process():    
             print("Data loaded in dataloader.")
+            print(f"train dataset size: {len(self.train_loader.dataset)}")
+            print(f"steps per epoch (len(train_loader)): {len(self.train_loader)}")
 
     def _create_model(self):
 
@@ -74,10 +76,17 @@ class MethodsSurrogate:
                 dropout=self.low_fi_dropout
             )
         self.model = self.model.to(self.device)
-        if dist.is_initialized():
-            self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[self.ddp_info.get("local_rank", 0)] if torch.cuda.is_available() else None,
-                output_device=self.ddp_info.get("local_rank", 0) if torch.cuda.is_available() else None,
+
+        if dist.is_initialized() and torch.cuda.is_available():
+            local_rank = self.ddp_info["local_rank"]  # no fallback to 0
+            self.model = torch.nn.parallel.DistributedDataParallel(
+                self.model,
+                device_ids=[local_rank],
+                output_device=local_rank,
             )
+        elif dist.is_initialized():
+            self.model = torch.nn.parallel.DistributedDataParallel(self.model)
+
 
     def _train_model(self):
         if self.model_type == "low_fi_fusion":
@@ -312,7 +321,7 @@ class MethodsSurrogate:
         state = torch.load(self.low_fi_model_path, map_location=self.device)
         if any(k.startswith("module.") for k in state.keys()):
             state = {k[len("module."):]: v for k, v in state.items()}
-        lf_model.load_state_dict(state)
+        lf_model.load_state_dict(state, map_location=self.device)
         lf_model.eval()
 
         # --- Accumulators ---

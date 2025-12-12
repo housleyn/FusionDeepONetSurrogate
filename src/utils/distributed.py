@@ -32,7 +32,9 @@ def setup_ddp():
     device = torch.device(f"cuda:{local_rank}")
 
     if not dist.is_initialized():
-        dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
+        dist.init_process_group(backend="nccl", rank=rank, world_size=world_size, device_id=device)
+
+
 
 
     return {"is_ddp": True, "rank": rank, "local_rank": local_rank, "world_size": world_size, "device": device}

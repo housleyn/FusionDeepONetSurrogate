@@ -5,6 +5,7 @@ from sklearn.neighbors import NearestNeighbors
 from scipy.spatial import KDTree
 import torch.distributed as dist
 from src.utils.distributed import is_main_process
+import os
 
 
 class MethodsPreprocess:
@@ -159,7 +160,7 @@ class MethodsPreprocess:
     def run_all(self, overwrite=False):
         do_work = False 
         if is_main_process():
-            if overwrite or not self.output_path.exists():
+            if overwrite or not os.path.exists(self.output_path):
                 self.load_and_pad()
                 print("saving preprocessed data to", self.output_path)
                 self.save()
@@ -171,7 +172,7 @@ class MethodsPreprocess:
     def run_all_low_fi(self, overwrite=False):
         do_work = False
         if is_main_process():
-            if overwrite or not self.output_path.exists():
+            if overwrite or not os.path.exists(self.output_path):
                 self.load_and_pad()
                 print("saving preprocessed low fidelity data to", self.output_path)
                 self.save()

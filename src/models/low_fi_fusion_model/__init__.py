@@ -11,8 +11,9 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
         self.out_dim = out_dim 
         
         self.num_hidden_layers = num_hidden_layers
-        self.outputs_mean = self._load_stats(npz_path)["outputs_mean"]
-        self.outputs_std = self._load_stats(npz_path)["outputs_std"]
+        stats = self._load_stats(npz_path)
+        self.register_buffer("outputs_mean", stats["outputs_mean"])
+        self.register_buffer("outputs_std", stats["outputs_std"])
         
 
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers, dropout)
@@ -64,6 +65,7 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
     def _load_stats(self, npz_path):
         data = np.load(npz_path)
         return {
-            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
-            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
+            "outputs_mean": torch.from_numpy(data["outputs_mean"]).float(),
+            "outputs_std": torch.from_numpy(data["outputs_std"]).float(),
+
         }
