@@ -3,17 +3,17 @@ import torch
 import torch.distributed as dist
 
 
-def setup_ddp():
-    """Initialize DDP if environment variables are set.
+# NCCL/Gloo friendly helper defaults
+_DEFAULT_BACKEND = "nccl" if torch.cuda.is_available() else "gloo"
 
-    Returns a dictionary with keys:
-        - is_ddp (bool): whether distributed is initialized
-        - rank (int): global rank (defaults to 0 when not distributed)
-        - local_rank (int): local rank on the current node (defaults to 0)
-        - world_size (int): total number of processes
-        - device (torch.device): device assigned to this process
+
+def setup_ddp():
+    """Initialize torch.distributed if launch env vars are present.
+
+    Returns:
+        dict: keys: is_ddp, rank, local_rank, world_size, device
     """
-    required_env = ("LOCAL_RANK", "RANK", "WORLD_SIZE")
+    required_env = ("LOCAL_RANK", "RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT")
     has_env = all(k in os.environ for k in required_env)
 
     if not has_env:
@@ -24,18 +24,12 @@ def setup_ddp():
     rank = int(os.environ["RANK"])
     world_size = int(os.environ["WORLD_SIZE"])
 
-    if not torch.cuda.is_available():
-        device = torch.device("cpu")
-        return {"is_ddp": False, "rank": 0, "local_rank": 0, "world_size": 1, "device": device}
-
-    torch.cuda.set_device(local_rank)
-    device = torch.device(f"cuda:{local_rank}")
+    device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        torch.cuda.set_device(local_rank)
 
     if not dist.is_initialized():
-        dist.init_process_group(backend="nccl", rank=rank, world_size=world_size, device_id=device)
-
-
-
+        dist.init_process_group(backend=_DEFAULT_BACKEND, rank=rank, world_size=world_size)
 
     return {"is_ddp": True, "rank": rank, "local_rank": local_rank, "world_size": world_size, "device": device}
 
@@ -47,3 +41,16 @@ def cleanup_ddp():
 
 def is_main_process():
     return not dist.is_initialized() or dist.get_rank() == 0
+
+
+def barrier():
+    if dist.is_available() and dist.is_initialized():
+        dist.barrier()
+
+
+def ddp_info_summary():
+    """Return a human readable summary of the distributed environment."""
+    if not dist.is_initialized():
+        return "DDP disabled"
+    backend = dist.get_backend()
+    return f"DDP backend={backend}, rank={dist.get_rank()}, world_size={dist.get_world_size()}"

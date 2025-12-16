@@ -1,6 +1,8 @@
 import torch
 import os
 import yaml
+
+
 class BaseSurrogate:
     def __init__(self, config_path, ddp_info=None):
         self.config_path = config_path
@@ -38,7 +40,6 @@ class BaseSurrogate:
         self.x_lim = config.get("x_lim", None)
         self.y_lim = config.get("y_lim", None)
 
-
         self.project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
@@ -65,8 +66,7 @@ class BaseSurrogate:
         if self.model_type == "low_fi_fusion":
             self.low_fi_model_path = f"Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
-        
+
         self.predicted_output_file = os.path.join(
             self.project_root, "Outputs", self.project_name, "predicted_output.csv"
         )
-        
