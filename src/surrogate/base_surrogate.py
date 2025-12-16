@@ -55,7 +55,10 @@ class BaseSurrogate:
         )
         self.ddp_info = ddp_info or {"is_ddp": False, "rank": 0, "local_rank": 0, "world_size": 1}
         if self.ddp_info.get("is_ddp") and torch.cuda.is_available():
-            self.device = torch.device(f"cuda:{self.ddp_info.get('local_rank', 0)}")
+            ddp_device = self.ddp_info.get("device")
+            self.device = ddp_device if isinstance(ddp_device, torch.device) else torch.device(
+                f"cuda:{self.ddp_info.get('local_rank', 0)}"
+            )
         else:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.rank = self.ddp_info.get("rank", 0)

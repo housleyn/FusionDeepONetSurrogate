@@ -21,14 +21,16 @@ class MethodsTrainer:
                 self.train_sampler.set_epoch(epoch)
 
             for coords, params, targets, sdf, *maybe_aux in train_loader:
-                coords = coords.to(self.device)
+                coords, params, targets, sdf, aux = self._move_batch_to_device(
+                    coords, params, targets, sdf, maybe_aux[0] if len(maybe_aux) else None
+                )
+                
                 coords.requires_grad = True
-                params = params.to(self.device)
+               
                 params.requires_grad = True
-                targets = targets.to(self.device)
+                
                 targets.requires_grad = True
-                sdf = sdf.to(self.device)
-                aux = maybe_aux[0].to(self.device) if len(maybe_aux) else None
+                
                 
 
                 self.optimizer.zero_grad()
@@ -79,11 +81,10 @@ class MethodsTrainer:
         total_samples = 0
         with torch.no_grad():
             for coords, params, targets, sdf, *maybe_aux in dataloader:
-                coords = coords.to(self.device)
-                params = params.to(self.device)
-                targets = targets.to(self.device)
-                sdf = sdf.to(self.device)
-                aux = maybe_aux[0].to(self.device) if len(maybe_aux) else None
+                coords, params, targets, sdf, aux = self._move_batch_to_device(
+                    coords, params, targets, sdf, maybe_aux[0] if len(maybe_aux) else None
+                )
+                
 
                 outputs = self.model(coords, params, sdf, aux=aux)
                 if self.loss_type == "mse":
@@ -124,3 +125,24 @@ class MethodsTrainer:
     def weighted_mse(self, pred, target, weights):
         weights = weights.unsqueeze(0).unsqueeze(-1)
         return ((pred-target) ** 2 * weights).mean()
+    
+    def _model_device(self):
+        return next(self.model.parameters()).device
+
+    def _move_batch_to_device(self, coords, params, targets, sdf, aux=None):
+        model_device = self._model_device()
+        non_blocking = model_device.type == "cuda"
+        coords = coords.to(model_device, non_blocking=non_blocking)
+        params = params.to(model_device, non_blocking=non_blocking)
+        targets = targets.to(model_device, non_blocking=non_blocking)
+        sdf = sdf.to(model_device, non_blocking=non_blocking)
+        aux = aux.to(model_device, non_blocking=non_blocking) if aux is not None else None
+
+        assert coords.device == model_device, f"coords device {coords.device} != model device {model_device}"
+        assert params.device == model_device, f"params device {params.device} != model device {model_device}"
+        assert targets.device == model_device, f"targets device {targets.device} != model device {model_device}"
+        assert sdf.device == model_device, f"sdf device {sdf.device} != model device {model_device}"
+        if aux is not None:
+            assert aux.device == model_device, f"aux device {aux.device} != model device {model_device}"
+
+        return coords, params, targets, sdf, aux

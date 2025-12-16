@@ -100,6 +100,12 @@ class MethodsSurrogate:
             
             residual_npz = os.path.join(self.project_root, "Outputs", self.project_name, "residual.npz")
             if is_main_process():
+                if os.path.exists(residual_npz):
+                    os.remove(residual_npz)
+                tmp = residual_npz + ".tmp.npz"
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+
                 self._make_residual_dataset(hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
             if dist.is_available() and dist.is_initialized():
                 dist.barrier()
@@ -194,95 +200,173 @@ class MethodsSurrogate:
     def _infer_all_unseen(self, folder):
         if dist.is_available() and dist.is_initialized() and not is_main_process():
             return
+
         errors = []
+        surface_metrics = []
+
         for filename in os.listdir(folder):
             file_path = os.path.join(folder, filename)
+
             if self.model_type == "low_fi_fusion":
-                stats_path = os.path.join(
-                self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
+                stats_path = os.path.join(self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz")
+                low_fi_stats_path = os.path.join(self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz")
+                inference = Inference(
+                    self.project_name,
+                    config_path=self.config_path,
+                    model_path=self.model_path,
+                    stats_path=stats_path,
+                    low_fi_stats_path=low_fi_stats_path,
+                    param_columns=self.param_columns,
+                    distance_columns=self.distance_columns,
+                    low_fi_model_path=self.low_fi_model_path if self.model_type == "low_fi_fusion" else None
                 )
-                low_fi_stats_path = os.path.join(
-                    self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
-                )
-                inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=stats_path, low_fi_stats_path=low_fi_stats_path, param_columns=self.param_columns, distance_columns=self.distance_columns, low_fi_model_path=self.low_fi_model_path if self.model_type=="low_fi_fusion" else None)
             else:
                 stats_path = self.npz_path
-                inference = Inference(self.project_name, config_path=self.config_path, model_path=self.model_path, stats_path=stats_path, param_columns=self.param_columns, distance_columns=self.distance_columns, low_fi_model_path=self.low_fi_model_path if self.model_type=="low_fi_fusion" else None)
+                inference = Inference(
+                    self.project_name,
+                    config_path=self.config_path,
+                    model_path=self.model_path,
+                    stats_path=stats_path,
+                    param_columns=self.param_columns,
+                    distance_columns=self.distance_columns,
+                    low_fi_model_path=self.low_fi_model_path if self.model_type == "low_fi_fusion" else None
+                )
+
             coords_np, params_np, sdf_np = inference.load_csv_input(file_path)
             params = params_np[1]
             output = inference.predict(coords_np, params, sdf_np)
-            predicted_output = os.path.join(self.project_root, "Outputs", self.project_name,"all_inferences", "predicted_"+filename)
+
+            predicted_output = os.path.join(
+                self.project_root, "Outputs", self.project_name, "all_inferences", "predicted_" + filename
+            )
             inference.save_to_csv(coords_np, output, out_path=predicted_output)
             if is_main_process():
                 print(f"Inference complete. Output saved to {predicted_output}.")
+
             postprocess = Postprocess(config_path=self.config_path, path_true=file_path, path_pred=predicted_output)
+
             file_errors = dict(postprocess.get_errors())
+            file_surface_metrics = dict(postprocess.get_surface_metrics())
+
             errors.append(file_errors)
+            surface_metrics.append(file_surface_metrics)
 
-        # Aggregate per-field error values across all files
-        field_aggregates = {}
-        for fe in errors:
-            if not isinstance(fe, dict):
-                continue
-            for field, vals in fe.items():
-                arr = np.asarray(vals).ravel()
-                field_aggregates.setdefault(field, []).append(arr)
+        def _aggregate_dict_of_scalars(list_of_dicts):
+            agg = {}
+            for d in list_of_dicts:
+                if not isinstance(d, dict):
+                    continue
+                for k, v in d.items():
+                    arr = np.asarray(v).ravel()
+                    if arr.size == 0:
+                        continue
+                    agg.setdefault(k, []).append(float(arr.mean()) if arr.size > 1 else float(arr.item()))
+            return agg
 
-        # Prepare output directory
+        field_aggregates = _aggregate_dict_of_scalars(errors)
+        surf_aggregates  = _aggregate_dict_of_scalars(surface_metrics)
+
         plots_dir = os.path.join(self.project_root, "Outputs", self.project_name, "all_inference_plots")
         os.makedirs(plots_dir, exist_ok=True)
 
-        # --- Plot scatter for each field and save ---
-        averages = {}  # store averages for later in all-in-one plot
         colors = plt.cm.tab10.colors
 
-        for idx, (field, list_of_errors) in enumerate(field_aggregates.items()):
-            # Each list_of_errors is a list of scalar L2 errors (floats)
-            y = [float(e) for e in list_of_errors]
+        # --- Per-field plots: error + surface metrics (optional overlay) ---
+        error_avgs = {k: np.mean(v) for k, v in field_aggregates.items()}
+        surf_avgs  = {k: np.mean(v) for k, v in surf_aggregates.items()}
+
+        for idx, (field, y_list) in enumerate(field_aggregates.items()):
+            y = np.asarray(y_list, dtype=float)
             x = np.arange(len(y))
-            avg = np.mean(y)
-            averages[field] = avg
+            avg = error_avgs[field]
 
             plt.figure(figsize=(8, 5))
-            plt.scatter(x, y, s=80, color=colors[idx % len(colors)], edgecolors='black', alpha=0.8,
-                        label=f"avg = {avg:.2f}%")
+            plt.scatter(
+                x, y, s=80, color=colors[idx % len(colors)], edgecolors="black", alpha=0.8,
+                label=f"{field} avg = {avg:.2f}%"
+            )
+
+            # If you want *surface metrics* to show on these same plots too:
+            # (uncomment if desired; otherwise keep per-surface plots separately below)
+            # for jdx, (m_name, m_list) in enumerate(surf_aggregates.items()):
+            #     m = np.asarray(m_list, dtype=float)
+            #     if len(m) != len(x):
+            #         continue
+            #     m_avg = surf_avgs[m_name]
+            #     plt.plot(x, m, marker="o", linewidth=2, label=f"{m_name} avg = {m_avg:.4g}")
+
             plt.xlabel("Inferences")
             plt.ylabel("Relative L2 Error (%)")
-            
             plt.grid(True, linestyle="--", alpha=0.6)
-            plt.legend( fontsize=9, title_fontsize=10)
+            plt.legend(fontsize=9, title_fontsize=10)
 
             safe_field = "".join(c if (c.isalnum() or c in "._-") else "_" for c in field)
             out_path = os.path.join(plots_dir, f"{safe_field}_l2_errors.png")
             plt.tight_layout()
             plt.savefig(out_path, bbox_inches="tight")
             plt.close()
-
             print(f"Saved scatter for '{field}' -> {out_path}")
 
-        # --- All-in-one summary plot with field averages ---
-        plt.figure(figsize=(10, 6))
-
-        for idx, (field, list_of_errors) in enumerate(field_aggregates.items()):
-            y = [float(e) for e in list_of_errors]
+        # --- Surface metrics plots (each metric gets its own scatter) ---
+        for idx, (metric, y_list) in enumerate(surf_aggregates.items()):
+            y = np.asarray(y_list, dtype=float)
             x = np.arange(len(y))
-            avg = averages[field]
-            plt.scatter(x, y, s=70, color=colors[idx % len(colors)], edgecolors='black',
-                        alpha=0.8, label=f"{field} (avg = {avg:.2f}%)")
+            avg = surf_avgs[metric]
 
-        plt.xticks(x, x+1)
+            plt.figure(figsize=(8, 5))
+            plt.scatter(
+                x, y, s=80, color=colors[idx % len(colors)], edgecolors="black", alpha=0.8,
+                label=f"avg = {avg:.4g}"
+            )
+            plt.xlabel("Inferences")
+            plt.ylabel(metric)
+            plt.grid(True, linestyle="--", alpha=0.6)
+            plt.legend(fontsize=9, title_fontsize=10)
+
+            safe_metric = "".join(c if (c.isalnum() or c in "._-") else "_" for c in metric)
+            out_path = os.path.join(plots_dir, f"{safe_metric}_surface_metric.png")
+            plt.tight_layout()
+            plt.savefig(out_path, bbox_inches="tight")
+            plt.close()
+            print(f"Saved surface metric scatter for '{metric}' -> {out_path}")
+
+        # --- All-in-one plot: errors + surface metrics, averages in legend ---
+        plt.figure(figsize=(11, 6))
+
+        # errors
+        for idx, (field, y_list) in enumerate(field_aggregates.items()):
+            y = np.asarray(y_list, dtype=float)
+            x = np.arange(len(y))
+            plt.scatter(
+                x, y, s=70, color=colors[idx % len(colors)], edgecolors="black", alpha=0.8,
+                label=f"{field} (avg={error_avgs[field]:.2f}%)"
+            )
+
+        # surface metrics (use different marker so you can tell them apart)
+        for idx, (metric, y_list) in enumerate(surf_aggregates.items()):
+            y = np.asarray(y_list, dtype=float)
+            x = np.arange(len(y))
+            plt.scatter(
+                x, y, s=70, marker="x", alpha=0.9,
+                label=f"{metric} (avg={surf_avgs[metric]:.4g})"
+            )
+
+        if len(field_aggregates) > 0:
+            n = len(next(iter(field_aggregates.values())))
+            plt.xticks(np.arange(n), np.arange(1, n + 1))
+
         plt.xlabel("Inferences")
-        plt.ylabel("Relative L2 Error (%)")
-        plt.title("All Fields")
+        plt.ylabel("Value (errors are %, metrics are raw)")
+        plt.title("All Fields + Surface Metrics")
         plt.grid(True, linestyle="--", alpha=0.6)
-        plt.legend(title="Fields and Averages", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9, title_fontsize=10)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=9, title_fontsize=10)
         plt.tight_layout()
 
-        out_path = os.path.join(plots_dir, "all_fields_l2_comparison.png")
+        out_path = os.path.join(plots_dir, "all_fields_plus_surface_metrics.png")
         plt.savefig(out_path, bbox_inches="tight")
         plt.close()
+        print(f"Saved combined plot (errors + surface metrics) -> {out_path}")
 
-        print(f"Saved combined comparison plot with averages -> {out_path}")
 
 
         
@@ -318,10 +402,14 @@ class MethodsSurrogate:
             out_dim=self.output_dim,
             npz_path=self.low_fi_output_path
         ).to(self.device)
-        state = torch.load(self.low_fi_model_path, map_location=self.device)
+        state = torch.load(self.low_fi_model_path, map_location="cpu")
+        if isinstance(state, dict) and "state_dict" in state:
+            state = state["state_dict"]
         if any(k.startswith("module.") for k in state.keys()):
             state = {k[len("module."):]: v for k, v in state.items()}
-        lf_model.load_state_dict(state, map_location=self.device)
+
+        lf_model.load_state_dict(state)
+        lf_model = lf_model.to(self.device)
         lf_model.eval()
 
         # --- Accumulators ---
@@ -377,19 +465,24 @@ class MethodsSurrogate:
         r_norm = (residuals - mu_r.numpy()) / std_r.numpy()
         uLF_norm = (uLF - mu_r.numpy()) / std_r.numpy()
 
+        out_dir = os.path.dirname(hf_npz_out)
+        os.makedirs(out_dir, exist_ok=True)
+        tmp_out = hf_npz_out + ".tmp.npz"
 
-        # --- Save residual dataset in padded format ---
         np.savez_compressed(
-            hf_npz_out,
+            tmp_out,
             coords=coords,
             params=params,
             sdf=sdf,
             outputs=r_norm,
             aux_lf_pointwise=uLF_norm,
             targets_highfi=uHF,
-            outputs_mean=mu_r.numpy(),   # keep naming consistent with _load_stats()
+            outputs_mean=mu_r.numpy(),
             outputs_std=std_r.numpy()
         )
+
+        # atomic replace on POSIX filesystems
+        os.replace(tmp_out, hf_npz_out)
         print(f"Residual dataset written to: {hf_npz_out}")
 
     def _load_stats(self, npz_path):

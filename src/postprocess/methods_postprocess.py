@@ -21,10 +21,10 @@ class MethodsPostprocess:
         self._create_table()
 
         self.plot_fields()
-        surface_metrics = self.compute_surface_percent_differences()
+        self.surface_metrics = self.compute_surface_percent_differences()
 
         self._create_surface_metrics_table(
-            metrics=surface_metrics,
+            metrics=self.surface_metrics,
             save_path=os.path.join(self.tables_dir, "surface_metric_errors.png")
         )
 
@@ -35,6 +35,10 @@ class MethodsPostprocess:
         for field in fields:
             self._calculate_relative_l2_error(field)
         return self.errors.items()
+    
+    def get_surface_metrics(self):
+        self.surface_metrics = self.compute_surface_percent_differences()
+        return self.surface_metrics
     
     def _calculate_error(self):
         error = np.abs(self.df_true - self.df_pred)

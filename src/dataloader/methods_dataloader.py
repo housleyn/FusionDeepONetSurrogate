@@ -24,7 +24,7 @@ class MethodsDataloader:
         aux = self.aux_lf  if hasattr(self, "aux_lf") else None
 
         if num_workers is None:
-            num_workers = get_default_num_workers()
+            num_workers = 0 #get_default_num_workers()
 
         pin_memory = torch.cuda.is_available()
         persistent = num_workers > 0
