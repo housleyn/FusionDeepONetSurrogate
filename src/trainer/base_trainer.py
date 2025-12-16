@@ -11,9 +11,6 @@ class BaseTrainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss_type = loss_type
         self.train_sampler = train_sampler
-        
 
         self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=lr_gamma)
         self.project_name = project_name
-
-
