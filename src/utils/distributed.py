@@ -28,8 +28,23 @@ def setup_ddp():
     if torch.cuda.is_available():
         torch.cuda.set_device(local_rank)
 
+    device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        print(f"[rank {rank}] local_rank={local_rank} current_device={torch.cuda.current_device()} "
+          f"visible={os.environ.get('CUDA_VISIBLE_DEVICES')}")
+
+
     if not dist.is_initialized():
-        dist.init_process_group(backend=_DEFAULT_BACKEND, rank=rank, world_size=world_size)
+        if torch.cuda.is_available():
+            print(f"[rank {rank}] local_rank={local_rank} current_device={torch.cuda.current_device()} visible={os.environ.get('CUDA_VISIBLE_DEVICES')}")
+
+        dist.init_process_group(
+            backend=_DEFAULT_BACKEND,
+            init_method="env://",
+            device_id=torch.device(f"cuda:{local_rank}") if torch.cuda.is_available() else None,
+
+        )
+
 
     return {"is_ddp": True, "rank": rank, "local_rank": local_rank, "world_size": world_size, "device": device}
 

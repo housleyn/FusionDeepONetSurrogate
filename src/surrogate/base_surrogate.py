@@ -55,14 +55,19 @@ class BaseSurrogate:
             self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
         )
         self.ddp_info = ddp_info or {"is_ddp": False, "rank": 0, "local_rank": 0, "world_size": 1}
+        self.rank = self.ddp_info.get("rank", 0)
+        self.local_rank = self.ddp_info.get("local_rank", 0)
+
         if self.ddp_info.get("is_ddp") and torch.cuda.is_available():
-            ddp_device = self.ddp_info.get("device")
-            self.device = ddp_device if isinstance(ddp_device, torch.device) else torch.device(
-                f"cuda:{self.ddp_info.get('local_rank', 0)}"
-            )
+            torch.cuda.set_device(self.local_rank)
+            self.device = torch.device(f"cuda:{self.local_rank}")
         else:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.rank = self.ddp_info.get("rank", 0)
+        if self.ddp_info.get("is_ddp") and torch.cuda.is_available():
+            print(f"[rank {self.rank}] local_rank={self.local_rank} "
+                f"torch.cuda.current_device()={torch.cuda.current_device()} "
+                f"device_name={torch.cuda.get_device_name(torch.cuda.current_device())}")
+
         if self.model_type == "low_fi_fusion":
             self.low_fi_model_path = f"Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"

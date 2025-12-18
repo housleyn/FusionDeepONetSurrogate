@@ -14,6 +14,8 @@ class MethodsTrainer:
             os.makedirs(f"Outputs/{self.project_name}/checkpoints", exist_ok=True)
 
         for epoch in range(num_epochs):
+            self._assert_model_single_device()
+
             epoch_start = time.time()
             epoch_loss = 0.0
             self.model.train()
@@ -78,9 +80,10 @@ class MethodsTrainer:
             if test_loss < best_loss:
                 best_loss = test_loss
                 if is_main_process():
+                    m = self.model.module if hasattr(self.model, "module") else self.model
                     checkpoint = {
                         "epoch": epoch,
-                        "model_state_dict": self.model.state_dict(),
+                        "model_state_dict": m.state_dict(),
                         "optimizer_state_dict": self.optimizer.state_dict(),
                         "scheduler_state_dict": self.lr_scheduler.state_dict(),
                         "loss": test_loss,
@@ -133,11 +136,9 @@ class MethodsTrainer:
             return
         if path is None:
             os.makedirs(f"Outputs/{self.project_name}/model", exist_ok=True)
-            if low_fi:
-                path = f"Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt"
-            else:
-                path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
-        torch.save(self.model.state_dict(), path)
+            path = f"Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt" if low_fi else f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
+        m = self.model.module if hasattr(self.model, "module") else self.model
+        torch.save(m.state_dict(), path)
 
     def load_model(self, path):
         self.model.load_state_dict(torch.load(path, map_location=self.device))
@@ -157,7 +158,8 @@ class MethodsTrainer:
         return ((pred - target) ** 2 * weights).mean()
 
     def _model_device(self):
-        return next(self.model.parameters()).device
+        return self._assert_model_single_device()
+
 
     def _move_batch_to_device(self, coords, params, targets, sdf, aux=None):
         model_device = self._model_device()
@@ -176,10 +178,25 @@ class MethodsTrainer:
             assert aux.device == model_device, f"aux device {aux.device} != model device {model_device}"
 
         return coords, params, targets, sdf, aux
+    
+    def _assert_model_single_device(self):
+            # unwrap DDP if needed
+            m = self.model.module if hasattr(self.model, "module") else self.model
 
+            devs = {p.device for p in m.parameters()}
+            buf_devs = {b.device for b in m.buffers()}
+            all_devs = devs | buf_devs
+
+            assert len(all_devs) == 1, (
+                f"Model is split across devices! param_devs={sorted(map(str, devs))} "
+                f"buffer_devs={sorted(map(str, buf_devs))}"
+            )
+            return next(iter(all_devs))
 
 def percentile(values, q):
-    if not values:
-        return 0.0
-    k = int(len(values) * q / 100)
-    return sorted(values)[min(k, len(values) - 1)]
+        if not values:
+            return 0.0
+        k = int(len(values) * q / 100)
+        return sorted(values)[min(k, len(values) - 1)]
+    
+    
