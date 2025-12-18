@@ -151,23 +151,29 @@ class MethodsSurrogate:
                 self.train_loader_low_fi, self.test_loader_low_fi, self.num_epochs, print_every=self.print_every
             )
             trainer_low_fi.save_model(low_fi=True)
+            barrier()
+            if dist.is_initialized():
+                dist.barrier()
+
             if is_main_process():
                 self._plot_loss_history(low_fidelity=True)
                 print("Training low_fidelity complete. Loss history and model saved.")
                 print("Evaluating low_fidelity model on high_fidelity data...")
 
             residual_npz = os.path.join(self.project_root, "Outputs", self.project_name, "residual.npz")
+            barrier()
             if is_main_process():
                 if os.path.exists(residual_npz):
                     os.remove(residual_npz)
                 tmp = residual_npz + ".tmp.npz"
                 if os.path.exists(tmp):
                     os.remove(tmp)
-
-                self._make_residual_dataset(
+            barrier()
+            self._make_residual_dataset(
                     hf_npz_out=residual_npz,
                     low_fi_stats_path=self.low_fi_output_path,
                     high_fi_stats_path=self.npz_path,
+                    write_rank0_only=True,
                 )
             barrier()
             residual = Data(residual_npz)
@@ -177,6 +183,38 @@ class MethodsSurrogate:
                 test_size=self.test_size,
                 ddp=dist.is_initialized(),
             )
+            if dist.is_initialized():
+                world = dist.get_world_size()
+                n = len(res_train_loader.dataset)
+                # aim for at least ~4 steps per epoch per rank
+                target_steps = 4
+                max_batch = max(1, n // (world * target_steps))
+                if res_train_loader.batch_size > max_batch and is_main_process():
+                    print(f"[stage2] batch_size too big for DDP stability: {res_train_loader.batch_size} -> {max_batch}")
+                # simplest: override the batch size used for stage2 by re-creating loaders
+                stage2_bs = min(res_train_loader.batch_size, max_batch)
+                residual = Data(residual_npz)
+                res_train_loader, res_test_loader, res_train_sampler = residual.get_dataloader(
+                    stage2_bs,
+                    shuffle=self.shuffle,
+                    test_size=self.test_size,
+                    ddp=True,
+                )
+
+            print(f"[rank {dist.get_rank()}] stage2 dist.is_initialized()={dist.is_initialized()}")
+            print(f"[rank {dist.get_rank()}] stage2 len(loader)={len(res_train_loader)} sampler={type(res_train_loader.sampler)}")
+
+            if dist.is_initialized():
+                print(f"[rank {dist.get_rank()}] stage2: "
+                    f"len(dataset)={len(res_train_loader.dataset)} "
+                    f"len(loader)={len(res_train_loader)} "
+                    f"batch_size={res_train_loader.batch_size}")
+
+
+            if dist.is_initialized():
+                print(f"[rank {dist.get_rank()}] stage2 len(res_train_loader)={len(res_train_loader)} "
+                    f"sampler_rank={getattr(res_train_loader.sampler, 'rank', None)}")
+            barrier()
             if is_main_process():
                 print("Residual dataset created and loaded.")
             self.model = FusionDeepONet(
@@ -208,7 +246,13 @@ class MethodsSurrogate:
                         gradient_as_bucket_view=True,
                     )
 
+            if dist.is_initialized():
+                if len(res_train_loader) == 0:
+                    raise RuntimeError(f"[rank {dist.get_rank()}] stage2 train loader is empty. "
+                                    f"Reduce batch_size or world_size.")
+
                     
+
             trainer_hi_fi = Trainer(
                 project_name=self.project_name,
                 model=self.model,
@@ -504,112 +548,115 @@ class MethodsSurrogate:
             return []
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.low_fi_data_folder))
         return sorted(glob.glob(os.path.join(base_dir, "*.csv")))
-    def _make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_path):
-            data_hf = Data(high_fi_stats_path)
-            hf_train_loader, hf_test_loader, _ = data_hf.get_dataloader(self.batch_size, shuffle=False, test_size=self.test_size, ddp=False)
-            
+    def _make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_path, write_rank0_only=False):
+        rank0_only = write_rank0_only and dist.is_initialized() and (dist.get_rank() != 0)
 
-            # --- Load stats as tensors ---
-            lf_stats = self._load_stats(low_fi_stats_path)
-            hf_stats = self._load_stats(high_fi_stats_path)
-            mu_lf, std_lf = lf_stats["outputs_mean"].to(self.device), lf_stats["outputs_std"].to(self.device)
-            mu_hf, std_hf = hf_stats["outputs_mean"].to(self.device), hf_stats["outputs_std"].to(self.device)
+        data_hf = Data(high_fi_stats_path)
+        hf_train_loader, hf_test_loader, _ = data_hf.get_dataloader(self.batch_size, shuffle=False, test_size=self.test_size, ddp=False)
+        
+        
+        # --- Load stats as tensors ---
+        lf_stats = self._load_stats(low_fi_stats_path)
+        hf_stats = self._load_stats(high_fi_stats_path)
+        mu_lf, std_lf = lf_stats["outputs_mean"].to(self.device), lf_stats["outputs_std"].to(self.device)
+        mu_hf, std_hf = hf_stats["outputs_mean"].to(self.device), hf_stats["outputs_std"].to(self.device)
 
-            # --- Load LF model ---
-            lf_model = Low_Fidelity_FusionDeepONet(
-                coord_dim=self.coord_dim + self.distance_dim,
-                param_dim=self.param_dim,
-                hidden_size=self.hidden_size,
-                num_hidden_layers=self.num_hidden_layers,
-                out_dim=self.output_dim,
-                npz_path=self.low_fi_output_path
-            ).to(self.device)
-            state = torch.load(self.low_fi_model_path, map_location="cpu")
-            if isinstance(state, dict) and "state_dict" in state:
-                state = state["state_dict"]
-            if any(k.startswith("module.") for k in state.keys()):
-                state = {k[len("module."):]: v for k, v in state.items()}
+        # --- Load LF model ---
+        lf_model = Low_Fidelity_FusionDeepONet(
+            coord_dim=self.coord_dim + self.distance_dim,
+            param_dim=self.param_dim,
+            hidden_size=self.hidden_size,
+            num_hidden_layers=self.num_hidden_layers,
+            out_dim=self.output_dim,
+            npz_path=self.low_fi_output_path
+        ).to(self.device)
+        state = torch.load(self.low_fi_model_path, map_location="cpu")
+        if isinstance(state, dict) and "state_dict" in state:
+            state = state["state_dict"]
+        if any(k.startswith("module.") for k in state.keys()):
+            state = {k[len("module."):]: v for k, v in state.items()}
 
-            lf_model.load_state_dict(state)
-            lf_model = lf_model.to(self.device)
-            lf_model.eval()
+        lf_model.load_state_dict(state)
+        lf_model = lf_model.to(self.device)
+        lf_model.eval()
 
-            # --- Accumulators ---
-            all_coords, all_params, all_sdf = [], [], []
-            all_uHF, all_uLF, all_residual = [], [], []
+        # --- Accumulators ---
+        all_coords, all_params, all_sdf = [], [], []
+        all_uHF, all_uLF, all_residual = [], [], []
 
-            with torch.no_grad():
-                for loader in [hf_train_loader, hf_test_loader]:
-                    for batch in loader:
-                        if isinstance(batch, dict):
-                            coords = batch["coords"].to(self.device)
-                            params = batch["params"].to(self.device)
-                            outputs = batch["outputs"].to(self.device)
-                            sdf     = batch["sdf"].to(self.device)
-                        else:
-                            coords, params, outputs, sdf = [t.to(self.device) for t in batch]
-                        targets = outputs  # HF normalized outputs
+        with torch.no_grad():
+            for loader in [hf_train_loader, hf_test_loader]:
+                for batch in loader:
+                    if isinstance(batch, dict):
+                        coords = batch["coords"].to(self.device)
+                        params = batch["params"].to(self.device)
+                        outputs = batch["outputs"].to(self.device)
+                        sdf     = batch["sdf"].to(self.device)
+                    else:
+                        coords, params, outputs, sdf = [t.to(self.device) for t in batch]
+                    targets = outputs  # HF normalized outputs
 
-                        # ---- Denormalize both HF and LF ----
-                        u_hf_denorm = targets * std_hf + mu_hf
-                        u_lf = lf_model(coords, params, sdf)
-                        assert u_lf.shape == targets.shape, \
-                            f"LF/HF shape mismatch: lf {u_lf.shape}, hf {targets.shape}"
-                        u_lf_denorm = u_lf * std_lf + mu_lf
+                    # ---- Denormalize both HF and LF ----
+                    u_hf_denorm = targets * std_hf + mu_hf
+                    u_lf = lf_model(coords, params, sdf)
+                    assert u_lf.shape == targets.shape, \
+                        f"LF/HF shape mismatch: lf {u_lf.shape}, hf {targets.shape}"
+                    u_lf_denorm = u_lf * std_lf + mu_lf
 
-                        # ---- Residuals in denormalized space ----
-                        r_denorm = u_hf_denorm - u_lf_denorm
+                    # ---- Residuals in denormalized space ----
+                    r_denorm = u_hf_denorm - u_lf_denorm
 
-                        # ---- Store (CPU numpy for saving) ----
-                        all_coords.append(coords.cpu().numpy())
-                        all_params.append(params.cpu().numpy())
-                        all_sdf.append(sdf.cpu().numpy())
-                        all_uHF.append(u_hf_denorm.cpu().numpy())
-                        all_uLF.append(u_lf_denorm.cpu().numpy())
-                        all_residual.append(r_denorm.cpu().numpy())
+                    # ---- Store (CPU numpy for saving) ----
+                    all_coords.append(coords.cpu().numpy())
+                    all_params.append(params.cpu().numpy())
+                    all_sdf.append(sdf.cpu().numpy())
+                    all_uHF.append(u_hf_denorm.cpu().numpy())
+                    all_uLF.append(u_lf_denorm.cpu().numpy())
+                    all_residual.append(r_denorm.cpu().numpy())
 
-            # --- Concatenate and compute residual stats ---
-            def cat(lst): return np.concatenate(lst, axis=0) if len(lst) > 1 else lst[0]
+        # --- Concatenate and compute residual stats ---
+        def cat(lst): return np.concatenate(lst, axis=0) if len(lst) > 1 else lst[0]
 
-            residuals = cat(all_residual)       # shape → (num_samples, npts_max, output_dim)
-            uLF = cat(all_uLF)                  # same
-            uHF = cat(all_uHF)
-            coords = cat(all_coords)
-            params = cat(all_params)
-            sdf = cat(all_sdf)
+        residuals = cat(all_residual)       # shape → (num_samples, npts_max, output_dim)
+        uLF = cat(all_uLF)                  # same
+        uHF = cat(all_uHF)
+        coords = cat(all_coords)
+        params = cat(all_params)
+        sdf = cat(all_sdf)
 
-            # --- Compute mean/std over all spatial points (flatten sample/point dims) ---
-            residuals_flat = residuals.reshape(-1, residuals.shape[-1])
-            mu_r = torch.tensor(np.mean(residuals_flat, axis=0), dtype=torch.float32)
-            std_r = torch.tensor(np.std(residuals_flat, axis=0) + 1e-8, dtype=torch.float32)
+        # --- Compute mean/std over all spatial points (flatten sample/point dims) ---
+        residuals_flat = residuals.reshape(-1, residuals.shape[-1])
+        mu_r = torch.tensor(np.mean(residuals_flat, axis=0), dtype=torch.float32)
+        std_r = torch.tensor(np.std(residuals_flat, axis=0) + 1e-8, dtype=torch.float32)
 
-            # --- Normalize back in the same padded shape ---
-            r_norm = (residuals - mu_r.numpy()) / std_r.numpy()
-            uLF_norm = (uLF - mu_r.numpy()) / std_r.numpy()
+        # --- Normalize back in the same padded shape ---
+        r_norm = (residuals - mu_r.numpy()) / std_r.numpy()
+        uLF_norm = (uLF - mu_r.numpy()) / std_r.numpy()
 
-            out_dir = os.path.dirname(hf_npz_out)
-            os.makedirs(out_dir, exist_ok=True)
-            tmp_out = hf_npz_out + ".tmp.npz"
+        out_dir = os.path.dirname(hf_npz_out)
+        os.makedirs(out_dir, exist_ok=True)
+        tmp_out = hf_npz_out + ".tmp.npz"
+        if rank0_only:
+            return 
+        np.savez_compressed(
+            tmp_out,
+            coords=coords,
+            params=params,
+            sdf=sdf,
+            outputs=r_norm,
+            aux_lf_pointwise=uLF_norm,
+            targets_highfi=uHF,
+            outputs_mean=mu_r.numpy(),
+            outputs_std=std_r.numpy()
+        )
 
-            np.savez_compressed(
-                tmp_out,
-                coords=coords,
-                params=params,
-                sdf=sdf,
-                outputs=r_norm,
-                aux_lf_pointwise=uLF_norm,
-                targets_highfi=uHF,
-                outputs_mean=mu_r.numpy(),
-                outputs_std=std_r.numpy()
-            )
-
-            # atomic replace on POSIX filesystems
-            os.replace(tmp_out, hf_npz_out)
-            print(f"Residual dataset written to: {hf_npz_out}")
+        # atomic replace on POSIX filesystems
+        os.replace(tmp_out, hf_npz_out)
+        print(f"Residual dataset written to: {hf_npz_out}")
 
     def _load_stats(self, npz_path):
-            data = np.load(npz_path)
-            return {
-                "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
-                "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
-            }
+        data = np.load(npz_path)
+        return {
+            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
+            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
+        }

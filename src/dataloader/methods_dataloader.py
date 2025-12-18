@@ -94,7 +94,7 @@ class MethodsDataloader:
                 num_replicas=world_size,
                 rank=rank,
                 shuffle=shuffle,
-                drop_last=False,
+                drop_last=True,
             )
 
             train_loader = DataLoader(
@@ -102,6 +102,7 @@ class MethodsDataloader:
                 batch_size=batch_size,
                 sampler=train_sampler,
                 shuffle=False,
+                drop_last=False,
                 num_workers=num_workers,
                 pin_memory=pin_memory,
                 persistent_workers=persistent,
