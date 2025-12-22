@@ -1,13 +1,15 @@
 import torch
 import os
+import time
 
 class MethodsTrainer:
     def train(self, train_loader, test_loader, num_epochs, print_every):
-        loss_history, test_loss_history = [], []
+        loss_history, test_loss_history, epoch_times = [], [], []
         best_loss = float('inf')
         os.makedirs(f'Outputs/{self.project_name}/checkpoints', exist_ok=True)
 
         for epoch in range(num_epochs):
+            epoch_start = time.time()
             epoch_loss = 0.0
             self.model.train()
             total_samples = 0
@@ -56,9 +58,10 @@ class MethodsTrainer:
                     'loss': test_loss
                 }
                 torch.save(checkpoint, f'Outputs/{self.project_name}/checkpoints/best_model.pt')
-
+            epoch_time = time.time() - epoch_start
+            epoch_times.append(epoch_time)
             if epoch % print_every == 0 or epoch == num_epochs - 1:
-                print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e}")
+                print(f"Epoch {epoch:4d} | Train Loss: {avg_loss:.6f} | Test Loss: {test_loss:.6f} | Best Test Loss: {best_loss:.6f} | LR: {self.lr_scheduler.get_last_lr()[0]:.2e} | Epoch Time: {epoch_time:.2f}s | Avg Time: {sum(epoch_times)/len(epoch_times):.2f}s")
 
         return loss_history, test_loss_history
 

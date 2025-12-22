@@ -1,26 +1,35 @@
-batch_size: 36
+batch_size: 16
 coord_dim: 3
-data_folder: Data/ellipse_data
-low_fi_data_folder: Data/low_fidelity_ellipse_data
+data_folder: Data/orion_data_32
 dimension: 2
+dist_threshold: 6
 distance_columns:
-- distanceToEllipse
+- distanceToSurface
 distance_dim: 1
-hidden_size: 32
+dropout: 0.0
+edge_percentile: 85
+hidden_size: 64
 lhs_sample: 500000
 loss_type: mse
-lr: 0.0001
+low_fi_data_folder: Data/orion_data_32
+low_fi_dropout: 0.0
+lr: 0.0005
 lr_gamma: 1.2
-model_type: FusionDeepONet
-num_epochs: 50000
-num_hidden_layers: 5
+model_type: low_fi_fusion
+num_epochs: 3
+num_hidden_layers: 8
 output_dim: 6
 param_columns:
-- a
-- b
+- Mach
+- AoA
 param_dim: 2
 print_every: 1
-project_name: dropout_test_fusion
+project_name: refactoring_test
 shuffle: false
 test_size: 0.2
-dropout: 0.3
+x_lim:
+- -3
+- 8
+y_lim:
+- -7.5
+- 7.5

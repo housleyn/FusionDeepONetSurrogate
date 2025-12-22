@@ -2,7 +2,7 @@ import torch
 import os
 import yaml
 class BaseInference:
-    def __init__(self, project_name, config_path ,model_path, stats_path, low_fi_stats_path=None, param_columns=None, distance_columns=None, low_fi_model_path=None):
+    def __init__(self, project_name, config_path ,model_path, stats_path, low_fi_stats_path=None, low_fi_model_path=None):
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
         self.coord_dim = config["coord_dim"] 
@@ -13,20 +13,12 @@ class BaseInference:
         self.model_type = config["model_type"]
         self.distance_dim = config["distance_dim"]
         self.low_fi_model_path = low_fi_model_path
-        
-        
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.param_columns = param_columns
-        self.distance_columns = distance_columns
+        self.param_columns = config["param_columns"]
+        self.distance_columns = config["distance_columns"]
         self.npz_path = stats_path
         if self.model_type == "low_fi_fusion":
-            # Load both LF and HF models in a single call where `path` points to the HF checkpoint.
-            # `_load_model` will internally use `self.low_fi_model_path` for the LF model and `path` for the HF model.
-
-            model_path = model_path #os.path.join(
-            #     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            #     "Outputs", project_name, "model", "fusion_deeponet.pt"
-            # )
+            model_path = model_path 
             residual_stats_path = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                 "Outputs", project_name, "residual.npz"

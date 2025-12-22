@@ -6,18 +6,16 @@ from sklearn.model_selection import train_test_split
 class MethodsDataloader:
 
     def get_dataloader(self, batch_size, shuffle=True, test_size=.2):
-        coords, outputs, params, sdf = self.coords, self.outputs, self.params, self.sdf
-        aux = self.aux_lf  if hasattr(self, "aux_lf") else None
 
-        idx = np.arange(coords.shape[0])
+        idx = np.arange(self.coords.shape[0])
         tri, tei = train_test_split(idx, test_size=test_size, shuffle=shuffle, random_state=42)
-
-        def make_ds(I):
-            if aux is None:
-                return TensorDataset(coords[I], params[I], outputs[I], sdf[I])
-            else:
-                return TensorDataset(coords[I], params[I], outputs[I], sdf[I], aux[I])
-
-        train_loader = DataLoader(make_ds(tri), batch_size=batch_size, shuffle=shuffle)
-        test_loader  = DataLoader(make_ds(tei), batch_size=batch_size, shuffle=False)
+        train_loader = DataLoader(self.make_ds(tri), batch_size=batch_size, shuffle=shuffle)
+        test_loader  = DataLoader(self.make_ds(tei), batch_size=batch_size, shuffle=False)
         return train_loader, test_loader
+    
+    def make_ds(self, I):
+            
+            if self.aux_lf is None:
+                return TensorDataset(self.coords[I], self.params[I], self.outputs[I], self.sdf[I])
+            else:
+                return TensorDataset(self.coords[I], self.params[I], self.outputs[I], self.sdf[I], self.aux_lf[I])

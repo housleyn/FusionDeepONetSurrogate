@@ -10,7 +10,8 @@ if __name__ == "__main__":
 
 
 
-    orion = Surrogate(config_path="configs/orion_sweep_3.yaml")
+    orion = Surrogate(config_path="configs/test.yaml")
+    orion._train()
     orion._infer_and_validate(file="Data/orion_data_100/orion_data_AoA0.18726272_Mach28.55732221.csv")
 
     # x43 = Surrogate(config_path="configs/x_43_sweep_23.yaml")

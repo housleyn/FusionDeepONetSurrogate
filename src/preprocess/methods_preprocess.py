@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import qmc 
 from sklearn.neighbors import NearestNeighbors
 from scipy.spatial import KDTree
+import os
 
 class MethodsPreprocess:
     def load_data(self):
@@ -153,14 +154,21 @@ class MethodsPreprocess:
 
         )
 
-    def run_all(self):
-        self.load_and_pad()
-        print("saving preprocessed data to", self.output_path)
-        self.save()
-    def run_all_low_fi(self):
-        self.load_and_pad()
-        print("saving preprocessed low fidelity data to", self.output_path)
-        self.save()
+    def run_all(self, overwrite=False):
+        if overwrite or not os.path.exists(self.output_path):
+            self.load_and_pad()
+            print("saving preprocessed data to", self.output_path)
+            self.save()
+        else:
+            print(f"Preprocessed file {self.output_path} already exists. Skipping preprocessing.")
+
+    def run_all_low_fi(self, overwrite=False):
+        if overwrite or not os.path.exists(self.output_path):
+            self.load_and_pad()
+            print("saving preprocessed low fidelity data to", self.output_path)
+            self.save()
+        else:
+            print(f"Preprocessed file {self.output_path} already exists. Skipping preprocessing.")
 
     def _normalize(self, data):
         mean = np.mean(data, axis=0)

@@ -26,18 +26,20 @@ class MethodsInference:
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
-
+    
     def _load_stats(self, npz_path):
         data = np.load(npz_path)
         return {
             "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32).to(self.device),
             "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32).to(self.device),
         }
-
+    
     def _denormalize(self, output):
         return output * self.stats["outputs_std"] + self.stats["outputs_mean"]
+    
     def _low_fi_denormalize(self, output):
         return output * self.low_fi_stats["outputs_std"] + self.low_fi_stats["outputs_mean"]
+    
     def _residual_denormalize(self, output):
         return output * self.residual_stats["outputs_std"] + self.residual_stats["outputs_mean"]
 
@@ -57,31 +59,23 @@ class MethodsInference:
                 low_fi_pred = self.model_1(coords, params, sdf)
                 low_fi_pred_denorm = self._low_fi_denormalize(low_fi_pred)
                 low_fi_pred_residual_norm = (low_fi_pred_denorm - self.residual_stats["outputs_mean"]) / self.residual_stats["outputs_std"]
-
-
                 residual_pred = self.model_2(coords, params, sdf, aux=low_fi_pred_residual_norm)
-
                 pred = self._residual_denormalize(residual_pred) + self._low_fi_denormalize(low_fi_pred)
-
         else:
             with torch.no_grad():
                 pred = self.model(coords, params, sdf)
             pred = self._denormalize(pred)
-        
         return pred.squeeze(0).cpu().numpy()
     
     def save_to_csv(self, coords_np, output_np, out_path=None):
-
         headers = [
             'Density (kg/m^3)', 'Velocity[i] (m/s)', 'Velocity[j] (m/s)', 'Velocity[k] (m/s)',
             'Absolute Pressure (Pa)', 'Temperature (K)', "X (m)", "Y (m)", "Z (m)"
         ]
-
         if out_path is None:
             project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             outputs_dir = os.path.join(project_root, "Outputs")
             out_path = os.path.join(outputs_dir,self.project_name, "predicted_output.csv")
-
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, mode='w', newline='') as f:
             writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
