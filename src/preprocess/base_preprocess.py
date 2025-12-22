@@ -1,6 +1,5 @@
 class BasePreprocess:
-    def __init__(self, files, dimension, output_path, param_columns, distance_columns, lhs_sample=100):
-
+    def __init__(self, files, output_path, param_columns, distance_columns):
 
         self.files = files
         self.output_path = output_path
@@ -9,9 +8,5 @@ class BasePreprocess:
         self.params = []
         self.outputs = []
         self.sdf = []
-        self.weights = []
-        self.npts_max = 0  
-        self.dimension = dimension
-        self.lhs_applied = False
-        self.lhs_sample = lhs_sample
+        self.npts_max = 0 
         self.distance = distance_columns

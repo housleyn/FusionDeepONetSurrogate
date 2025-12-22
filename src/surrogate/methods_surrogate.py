@@ -22,11 +22,11 @@ class MethodsSurrogate:
         
     
     def _preprocess_data(self):
-        preprocess = Preprocess(files=self.files ,dimension=self.dimension, output_path=self.output_path, param_columns=self.param_columns, distance_columns=self.distance_columns, lhs_sample=self.lhs_sample)
-        preprocess.run_all()
+        preprocess = Preprocess(files=self.files, output_path=self.output_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
+        preprocess.run_all(overwrite=self.overwrite)
         if self.model_type == "low_fi_fusion":
-            preprocess_low_fi = Preprocess(files=self.low_fi_files ,dimension=self.dimension, output_path=self.low_fi_output_path, param_columns=self.param_columns, distance_columns=self.distance_columns, lhs_sample=self.lhs_sample)
-            preprocess_low_fi.run_all()
+            preprocess_low_fi = Preprocess(files=self.low_fi_files, output_path=self.low_fi_output_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
+            preprocess_low_fi.run_all(overwrite=self.overwrite)
         print("Data preprocessing complete.")
 
     def _load_data(self):

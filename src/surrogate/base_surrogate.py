@@ -8,6 +8,7 @@ class BaseSurrogate:
             config = yaml.safe_load(file)
         self.project_name = config["project_name"]
         self.data_folder = config["data_folder"]
+        self.overwrite = config.get("overwrite", False)
         self.low_fi_data_folder = config.get("low_fi_data_folder", None)
         self.files = self._get_data_files()
         self.low_fi_files = self._get_low_fi_data_files() if self.low_fi_data_folder else None
