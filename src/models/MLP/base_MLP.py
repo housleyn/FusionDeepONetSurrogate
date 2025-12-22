@@ -8,10 +8,8 @@ class BaseMLP(nn.Module):
         self.layers = nn.ModuleList()
         self.activations = nn.ModuleList()
         self.dropouts = nn.ModuleList()
-
         self.layers.append(nn.Linear(in_features, hidden_features))
         self.activations.append(RowdyActivation(hidden_features))
-
         for _ in range(num_hidden_layers - 1):
             self.layers.append(nn.Linear(hidden_features, hidden_features))
             self.activations.append(RowdyActivation(hidden_features))

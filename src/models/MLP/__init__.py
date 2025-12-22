@@ -1,6 +1,5 @@
 from .base_MLP import BaseMLP 
 
-
 class MLP(BaseMLP):
     def forward(self, x):
         for i, (layer, act) in enumerate(zip(self.layers, self.activations)):
