@@ -20,7 +20,6 @@ class MethodsSurrogate:
         self._create_model()
         self._train_model()
         
-    
     def _preprocess_data(self):
         preprocess = Preprocess(files=self.files, output_path=self.output_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
         preprocess.run_all(overwrite=self.overwrite)
@@ -243,8 +242,6 @@ class MethodsSurrogate:
 
         print(f"Saved combined comparison plot with averages -> {out_path}")
 
-
-        
     def _get_data_files(self):
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.data_folder))
         return sorted(glob.glob(os.path.join(base_dir, "*.csv")))
@@ -255,7 +252,6 @@ class MethodsSurrogate:
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.low_fi_data_folder))
         return sorted(glob.glob(os.path.join(base_dir, "*.csv")))
     
-
     def _make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_path):
         hf_train_loader = self.train_loader
         hf_test_loader  = self.test_loader

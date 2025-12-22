@@ -19,7 +19,6 @@ model_type: low_fi_fusion
 num_epochs: 3
 num_hidden_layers: 8
 output_dim: 6
-overwrite: true
 param_columns:
 - Mach
 - AoA

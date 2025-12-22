@@ -89,6 +89,7 @@ class MethodsTrainer:
         return total_loss / total_samples
 
     def save_model(self, path=None, low_fi=False):
+        self.load_best_weights(f'Outputs/{self.project_name}/checkpoints/best_model.pt')
         if path is None:
             os.makedirs(f'Outputs/{self.project_name}/model', exist_ok=True)
             if low_fi:
@@ -113,3 +114,9 @@ class MethodsTrainer:
     def weighted_mse(self, pred, target, weights):
         weights = weights.unsqueeze(0).unsqueeze(-1)
         return ((pred-target) ** 2 * weights).mean()
+    
+    def load_best_weights(self, path):
+        checkpoint = torch.load(path, map_location=self.device)
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.model.eval()
+
