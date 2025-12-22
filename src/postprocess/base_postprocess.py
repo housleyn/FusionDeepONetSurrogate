@@ -17,8 +17,6 @@ class BasePostprocess:
             config = yaml.safe_load(file)
         self.project_name = config.get("project_name")
         self.model_type = config.get("model_type")
-        self.dist_threshold = config.get("dist_threshold", 0.01)
-        self.edge_percentile = config.get("edge_percentile", 99.5)
         self.x_lim = config.get("x_lim", None)
         self.y_lim = config.get("y_lim", None)
         self.param_columns = config.get("param_columns", [])
