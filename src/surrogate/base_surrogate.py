@@ -31,7 +31,6 @@ class BaseSurrogate:
         self.lr = config["lr"]
         self.lr_gamma = config["lr_gamma"]
         self.model_type = config["model_type"]
-        self.loss_type = config["loss_type"]
         self.low_fi_dropout = config.get("low_fi_dropout", 0.0)
         self.dropout = config.get("dropout", 0.0)
         self.dist_threshold = config.get("dist_threshold", 0.01)

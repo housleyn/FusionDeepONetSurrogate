@@ -54,7 +54,7 @@ class MethodsSurrogate:
     def _train_model(self):
         if self.model_type == "low_fi_fusion":
             trainer_low_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader_low_fi, device=self.device, lr=self.lr, 
-                                     lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+                                     lr_gamma=self.lr_gamma)
             self.loss_history, self.test_loss_history = trainer_low_fi.train(self.train_loader_low_fi, self.test_loader_low_fi, self.num_epochs, print_every=self.print_every)
             trainer_low_fi.save_model(low_fi=True)
             plot_loss_history(self, low_fidelity=True)
@@ -69,13 +69,14 @@ class MethodsSurrogate:
             self.model = FusionDeepONet(coord_dim=self.coord_dim + self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size,
                                         num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, aux_dim=self.output_dim, dropout=self.dropout).to(self.device)
             trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, 
-                                    lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+                                    lr_gamma=self.lr_gamma)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
             trainer_hi_fi.save_model()
             plot_loss_history(self, low_fidelity=True)
             print("Training high_fidelity complete. Loss history and model saved.")
         else:
-            trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, lr_gamma=self.lr_gamma, loss_type=self.loss_type)
+            trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, 
+                              lr_gamma=self.lr_gamma)
             self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
             trainer.save_model()
             plot_loss_history(self)
