@@ -22,7 +22,6 @@ class MethodsPreprocess:
             self.outputs.append(outputs)
             self.sdf.append(sdf)
 
-
     def load_and_pad(self):
         self.load_data()
         self.npts_max = max(c.shape[0] for c in self.coords)

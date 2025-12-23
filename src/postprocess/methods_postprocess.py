@@ -2,8 +2,6 @@ import numpy as np
 import os
 from .plotting_postprocess import (create_table, plot_fields, compute_surface_percent_differences, create_surface_metrics_table)
 
-
-
 class MethodsPostprocess:
     def run(self, dimension):
         self._calculate_error()
