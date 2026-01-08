@@ -9,7 +9,7 @@ base_config = {
     "distance_dim": 1,
     "distance_columns": ["distanceToSurface"],
     "data_folder": "Data/x_43_data_36",
-    "low_fi_data_folder": "Data/x_43_data_36",
+    "low_fi_data_folder": "Data/x_43_low_fi_data_72",
     "dimension": 2,
     "lhs_sample": 500000,
     "num_epochs": 50000,
@@ -56,15 +56,15 @@ for i, combination in enumerate(sampled_combinations):
     for param_name, param_value in zip(param_names, combination):
         config[param_name] = param_value
 
-    config["project_name"] = f"x_43_sweep_{i}"
+    config["project_name"] = f"x_43_multi_sweep_{i}"
 
-    config_filename = f"configs/x_43_sweep_{i}.yaml"
+    config_filename = f"configs/x_43_multi_sweep_{i}.yaml"
     with open(config_filename, "w") as f:
         yaml.dump(config, f)
 
 if __name__ == "__main__":
     for i in range(len(sampled_combinations)):
-        config_path = f"configs/x_43_sweep_{i}.yaml"
+        config_path = f"configs/x_43_multi_sweep_{i}.yaml"
 
         surrogate = Surrogate(config_path=config_path)
         surrogate._train()

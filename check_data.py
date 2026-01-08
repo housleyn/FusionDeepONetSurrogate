@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # Path to the folder
-folder = os.path.join("Data", "orion_low_fi_data")
+folder = os.path.join("Data", "spheres_data")
 
 # Threshold for "extremely large" values
 THRESHOLD = 1e10   # adjust if needed

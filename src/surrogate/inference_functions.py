@@ -81,4 +81,4 @@ def infer_all_unseen(self, folder):
             field_aggregates.setdefault(field, []).append(arr)
 
     
-    plot_all_inference_errors(field_aggregates)
+    plot_all_inference_errors(self,field_aggregates)
