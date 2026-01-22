@@ -16,6 +16,10 @@ def train_one_epoch(self, train_loader):
 
     for batch in train_loader:
         coords, params, targets, sdf, aux = to_device_batch(self, batch)
+        lr = self.lr * (self.decay_rate ** (self.global_step / self.decay_steps))
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr
+        self.global_step += 1
 
         self.optimizer.zero_grad()
         outputs = self.model(coords, params, sdf, aux=aux)

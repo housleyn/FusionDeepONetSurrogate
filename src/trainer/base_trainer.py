@@ -8,8 +8,12 @@ class BaseTrainer:
         self.dataloader = dataloader
         self.device = device
         self.criterion = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.lr = lr
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        self.decay_rate = .91
+        self.decay_steps = 1000
         self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=lr_gamma)
         self.project_name = project_name
+        self.global_step = 0
 
 

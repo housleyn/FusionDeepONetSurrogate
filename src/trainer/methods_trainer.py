@@ -15,8 +15,8 @@ class MethodsTrainer:
 
             avg_loss = train_one_epoch(self, train_loader)
 
-            if (epoch + 1) % 10000 == 0:
-                self.lr_scheduler.step()
+            # if (epoch + 1) % 10000 == 0:
+            #     self.lr_scheduler.step()
 
             test_loss = self.evaluate(test_loader)
             best_loss = save_best_checkpoint_if_needed(self, epoch, test_loss, best_loss)
