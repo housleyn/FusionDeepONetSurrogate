@@ -9,7 +9,7 @@ base_config = {
     "distance_dim": 1,
     "distance_columns": ["distanceToSurface"],
     "data_folder": "Data/orion_data_100",
-    "low_fi_data_folder": "Data/orion_data_100",
+    "low_fi_data_folder": "Data/orion_low_fi_data",
     "dimension": 2,
     "lhs_sample": 500000,
     "num_epochs": 50000,
@@ -56,19 +56,19 @@ for i, combination in enumerate(sampled_combinations):
     for param_name, param_value in zip(param_names, combination):
         config[param_name] = param_value
 
-    config["project_name"] = f"orion_sweep_test"
+    config["project_name"] = f"orion_multi_sweep_{i}"
 
-    config_filename = f"configs/orion_sweep_test.yaml"
+    config_filename = f"configs/orion_multi_sweep_{i}.yaml"
     with open(config_filename, "w") as f:
         yaml.dump(config, f)
 
 if __name__ == "__main__":
     for i in range(len(sampled_combinations)):
-        config_path = f"configs/orion_sweep_test.yaml"
+        config_path = f"configs/orion_multi_sweep_{i}.yaml"
             
         surrogate = Surrogate(config_path=config_path)
         surrogate._train()
         surrogate._infer_and_validate(file="Data/orion_data_100/orion_data_AoA0.18726272_Mach28.55732221.csv")
-        surrogate._infer_all_unseen(folder="Data/orion_unseen_100")
+        surrogate._infer_all_unseen(folder="Data/orion_unseen_32")
 
     

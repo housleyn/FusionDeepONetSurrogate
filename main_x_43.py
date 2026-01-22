@@ -36,7 +36,7 @@ hyperparams = {
     "num_hidden_layers": [3, 4, 5, 6, 7, 8],
     "batch_size": [8, 16, 32, 36],
     "shuffle": [True, False],
-    "dropout": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+    "dropout": [0.0, 0.1, 0.2, 0.3],
     "low_fi_dropout": [0.0]
 }
 
@@ -64,7 +64,7 @@ for i, combination in enumerate(sampled_combinations):
 
 if __name__ == "__main__":
     for i in range(len(sampled_combinations)):
-        config_path = f"configs/x_43_multi_sweep_{i}.yaml"
+        config_path = f"configs/x_43_multi_sweep_23.yaml"
 
         surrogate = Surrogate(config_path=config_path)
         surrogate._train()

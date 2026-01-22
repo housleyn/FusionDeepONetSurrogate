@@ -8,21 +8,19 @@ base_config = {
     "coord_dim": 3,
     "distance_dim": 1,
     "distance_columns": ["distanceToSurface"],
-    "data_folder": "Data/spheres_data_150",
-    "low_fi_data_folder": "Data/spheres_data_150",
+    "data_folder": "Data/spheres_data",
+    "low_fi_data_folder": "Data/spheres_data",
     "dimension": 2,
     "lhs_sample": 500000,
-    "num_epochs": 2,
+    "num_epochs": 50000,
     "output_dim": 6,
     "param_columns": ["x_field", "y_field", "Mach_field"],
     "param_dim": 3,
     "print_every": 1,
     "test_size": 0.2,
-    "model_type": "low_fi_fusion",
+    "model_type": "FusionDeepONet",
     "loss_type": "mse",
-    "low_fi_dropout": 0.0,
-    "dist_threshold": .01,
-    "edge_percentile": .001,
+    # "low_fi_dropout": 0.0,
     "x_lim": [-1, 5],
     "y_lim": [-2, 2], 
 
@@ -36,7 +34,7 @@ hyperparams = {
     "num_hidden_layers": [3, 4, 5, 6, 7, 8],
     "batch_size": [8, 16, 32, 36],
     "shuffle": [True, False],
-    "dropout": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+    # "dropout": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
 }
 
 all_combinations = list(itertools.product(*hyperparams.values()))
@@ -55,18 +53,18 @@ for i, combination in enumerate(sampled_combinations):
     for param_name, param_value in zip(param_names, combination):
         config[param_name] = param_value
 
-    config["project_name"] = f"spheres_sweep_{i}"
+    config["project_name"] = f"spheres_fusion_sweep_{i}"
 
-    config_filename = f"configs/spheres_sweep_{i}.yaml"
+    config_filename = f"configs/spheres_fusion_sweep_{i}.yaml"
     with open(config_filename, "w") as f:
         yaml.dump(config, f)
 
 if __name__ == "__main__":
-    for i in range(len(sampled_combinations)):
-        config_path = f"configs/spheres_sweep_{i}.yaml"
+    # for i in range(len(sampled_combinations)):
+    config_path = f"configs/spheres_fusion_sweep_0.yaml"
 
     surrogate = Surrogate(config_path=config_path)
     surrogate._train()
-    surrogate._infer_and_validate(file="Data/spheres_data_150/sf_x1.515288712_y-13.03213444Mach8.262405742.csv")
-    surrogate._infer_all_unseen(folder="Data/spheres_unseen_20")
+    # surrogate._infer_and_validate(file="Data/spheres_data_150/sf_x1.515288712_y-13.03213444Mach8.262405742.csv")
+    # surrogate._infer_all_unseen(folder="Data/spheres_unseen_20")
     

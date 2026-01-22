@@ -72,7 +72,7 @@ class MethodsSurrogate:
                                     lr_gamma=self.lr_gamma)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
             trainer_hi_fi.save_model()
-            plot_loss_history(self, low_fidelity=True)
+            plot_loss_history(self, low_fidelity=False)
             print("Training high_fidelity complete. Loss history and model saved.")
         else:
             trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, 
