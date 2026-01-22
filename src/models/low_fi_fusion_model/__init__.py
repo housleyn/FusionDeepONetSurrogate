@@ -10,8 +10,8 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
         self.hidden_size = hidden_size
         self.out_dim = out_dim 
         self.num_hidden_layers = num_hidden_layers
-        self.outputs_mean = self._load_stats(npz_path)["outputs_mean"]
-        self.outputs_std = self._load_stats(npz_path)["outputs_std"]
+        # self.outputs_mean = self._load_stats(npz_path)["outputs_mean"]
+        # self.outputs_std = self._load_stats(npz_path)["outputs_std"]
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers, dropout)
         input_dim = coord_dim + aux_dim  
         self.trunk_layers = nn.ModuleList([
@@ -47,9 +47,9 @@ class Low_Fidelity_FusionDeepONet(nn.Module):
         out = torch.sum (branch_coefficients * trunk_features, dim=-1)  
         return out
     
-    def _load_stats(self, npz_path):
-        data = np.load(npz_path)
-        return {
-            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
-            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
-        }
+    # def _load_stats(self, npz_path):
+    #     data = np.load(npz_path)
+    #     return {
+    #         "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
+    #         "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
+    #     }

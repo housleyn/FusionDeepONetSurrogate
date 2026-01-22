@@ -8,8 +8,8 @@ def make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_pat
 
         lf_stats = self._load_stats(low_fi_stats_path)
         hf_stats = self._load_stats(high_fi_stats_path)
-        mu_lf, std_lf = lf_stats["outputs_mean"].to(self.device), lf_stats["outputs_std"].to(self.device)
-        mu_hf, std_hf = hf_stats["outputs_mean"].to(self.device), hf_stats["outputs_std"].to(self.device)
+        min_lf, max_lf = lf_stats["outputs_min"].to(self.device), lf_stats["outputs_max"].to(self.device)
+        min_hf, max_hf = hf_stats["outputs_min"].to(self.device), hf_stats["outputs_max"].to(self.device)
 
         lf_model = Low_Fidelity_FusionDeepONet(
             coord_dim=self.coord_dim + self.distance_dim,
@@ -37,11 +37,11 @@ def make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_pat
                         coords, params, outputs, sdf = [t.to(self.device) for t in batch]
                     targets = outputs  
 
-                    u_hf_denorm = targets * std_hf + mu_hf
+                    u_hf_denorm = targets * (max_hf - min_hf) + min_hf
                     u_lf = lf_model(coords, params, sdf)
                     assert u_lf.shape == targets.shape, \
                         f"LF/HF shape mismatch: lf {u_lf.shape}, hf {targets.shape}"
-                    u_lf_denorm = u_lf * std_lf + mu_lf
+                    u_lf_denorm = u_lf * (max_lf - min_lf) + min_lf
                     
                     r_denorm = u_hf_denorm - u_lf_denorm
 
@@ -64,13 +64,12 @@ def make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_pat
 
         
         residuals_flat = residuals.reshape(-1, residuals.shape[-1])
-        mu_r = torch.tensor(np.mean(residuals_flat, axis=0), dtype=torch.float32)
-        std_r = torch.tensor(np.std(residuals_flat, axis=0) + 1e-8, dtype=torch.float32)
+        min_r = torch.tensor(np.min(residuals_flat, axis=0), dtype=torch.float32)
+        max_r = torch.tensor(np.max(residuals_flat, axis=0), dtype=torch.float32)
 
         
-        r_norm = (residuals - mu_r.numpy()) / std_r.numpy()
-        uLF_norm = (uLF - mu_r.numpy()) / std_r.numpy()
-
+        r_norm = (residuals - min_r.numpy()) / (max_r.numpy() - min_r.numpy() + 1e-8)
+        uLF_norm = (uLF - min_r.numpy()) / (max_r.numpy() - min_r.numpy() + 1e-8)
         np.savez_compressed(
             hf_npz_out,
             coords=coords,
@@ -79,7 +78,7 @@ def make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_pat
             outputs=r_norm,
             aux_lf_pointwise=uLF_norm,
             targets_highfi=uHF,
-            outputs_mean=mu_r.numpy(),   
-            outputs_std=std_r.numpy()
+            outputs_mean=min_r.numpy(),   
+            outputs_std=max_r.numpy()
         )
         print(f"Residual dataset written to: {hf_npz_out}")

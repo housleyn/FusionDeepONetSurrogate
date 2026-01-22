@@ -30,18 +30,22 @@ class MethodsInference:
     def _load_stats(self, npz_path):
         data = np.load(npz_path)
         return {
-            "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32).to(self.device),
-            "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32).to(self.device),
+            "outputs_min": torch.tensor(data["outputs_min"], dtype=torch.float32).to(self.device),
+            "outputs_max": torch.tensor(data["outputs_max"], dtype=torch.float32).to(self.device),
         }
+
     
     def _denormalize(self, output):
-        return output * self.stats["outputs_std"] + self.stats["outputs_mean"]
+        return output * (self.stats["outputs_max"] - self.stats["outputs_min"]) + self.stats["outputs_min"]
+
     
     def _low_fi_denormalize(self, output):
-        return output * self.low_fi_stats["outputs_std"] + self.low_fi_stats["outputs_mean"]
+        return output * (self.low_fi_stats["outputs_max"] - self.low_fi_stats["outputs_min"]) + self.low_fi_stats["outputs_min"]
+
     
     def _residual_denormalize(self, output):
-        return output * self.residual_stats["outputs_std"] + self.residual_stats["outputs_mean"]
+        return output * (self.residual_stats["outputs_max"] - self.residual_stats["outputs_min"]) + self.residual_stats["outputs_min"]
+
 
     def load_csv_input(self, csv_path):
         df = pd.read_csv(csv_path)
@@ -58,7 +62,7 @@ class MethodsInference:
             with torch.no_grad():
                 low_fi_pred = self.model_1(coords, params, sdf)
                 low_fi_pred_denorm = self._low_fi_denormalize(low_fi_pred)
-                low_fi_pred_residual_norm = (low_fi_pred_denorm - self.residual_stats["outputs_mean"]) / self.residual_stats["outputs_std"]
+                low_fi_pred_residual_norm = (low_fi_pred_denorm - self.residual_stats["outputs_min"]) / (self.residual_stats["outputs_max"] - self.residual_stats["outputs_min"] + 1e-8)
                 residual_pred = self.model_2(coords, params, sdf, aux=low_fi_pred_residual_norm)
                 pred = self._residual_denormalize(residual_pred) + self._low_fi_denormalize(low_fi_pred)
         else:

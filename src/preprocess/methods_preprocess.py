@@ -46,7 +46,7 @@ class MethodsPreprocess:
         self.outputs = padded_outputs
         
         outputs_flat = np.vstack(self.outputs)
-        outputs_flat, self.outputs_mean, self.outputs_std = self._normalize(outputs_flat)
+        outputs_flat, self.outputs_min, self.outputs_max = self._normalize(outputs_flat)
         idx = 0
 
         for i in range(len(self.outputs)):
@@ -75,8 +75,8 @@ class MethodsPreprocess:
             outputs=Y_outputs,         
             params=G_params,           
             sdf=S_sdf,              
-            outputs_mean=self.outputs_mean,   
-            outputs_std=self.outputs_std,     
+            outputs_min=self.outputs_min,   
+            outputs_max=self.outputs_max,     
 
         )
 
@@ -97,9 +97,12 @@ class MethodsPreprocess:
             print(f"Preprocessed file {self.output_path} already exists. Skipping preprocessing.")
 
     def _normalize(self, data):
-        mean = np.mean(data, axis=0)
-        std = np.std(data, axis=0)
-        std[std == 0] = 1  
-        return (data - mean) / std, mean, std
+        dmin = np.min(data, axis=0)
+        dmax = np.max(data, axis=0)
+        eps = 1e-8
+        scale = dmax - dmin
+        scale[scale == 0] = 1  
+        normalized = (data - dmin) / (scale + eps)
+        return normalized, dmin, dmax
 
     
