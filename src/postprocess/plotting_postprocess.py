@@ -158,8 +158,8 @@ def plot_residual_analysis(self):
     residual_data = np.load(residual_path, allow_pickle=True)
 
     outputs       = residual_data["outputs"]        # (num_sims, num_points, num_fields)
-    outputs_mean  = residual_data["outputs_mean"]   # (num_fields,)
-    outputs_std   = residual_data["outputs_std"]    # (num_fields,)
+    outputs_min   = residual_data["outputs_min"]    # (num_fields,)
+    outputs_max   = residual_data["outputs_max"]    # (num_fields,)
     params_all    = residual_data["params"]         # (num_sims, num_params)
     coords_all    = residual_data["coords"]         # (num_sims, num_points, 3)
     fields        = self.fields
@@ -204,10 +204,14 @@ def plot_residual_analysis(self):
     base_geom_mask = is_surface_res[triang.triangles].any(axis=1)
 
     # Loop through each field
+    eps = 1e-8
+
     for i, field in enumerate(fields):
-        z_raw = outputs_sim[:, i]
-        z_denorm = z_raw * outputs_std[i] + outputs_mean[i]
+        z_raw = outputs_sim[:, i]  # this is normalized residual output in [0,1] (ideally)
+
+        z_denorm = z_raw * (outputs_max[i] - outputs_min[i] + eps) + outputs_min[i]
         z_abs = np.abs(z_denorm)
+
 
         node_invalid = ~(np.isfinite(z_raw) & np.isfinite(z_denorm) & np.isfinite(z_abs))
         field_tri_mask = node_invalid[triang.triangles].any(axis=1)

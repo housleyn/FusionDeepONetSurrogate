@@ -78,7 +78,7 @@ def make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_pat
             outputs=r_norm,
             aux_lf_pointwise=uLF_norm,
             targets_highfi=uHF,
-            outputs_mean=min_r.numpy(),   
-            outputs_std=max_r.numpy()
+            outputs_min=min_r.numpy(),   
+            outputs_max=max_r.numpy()
         )
         print(f"Residual dataset written to: {hf_npz_out}")

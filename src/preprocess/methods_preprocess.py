@@ -80,7 +80,7 @@ class MethodsPreprocess:
 
         )
 
-    def run_all(self, overwrite=False):
+    def run_all(self, overwrite=True):
         if overwrite or not os.path.exists(self.output_path):
             self.load_and_pad()
             print("saving preprocessed data to", self.output_path)
@@ -88,7 +88,7 @@ class MethodsPreprocess:
         else:
             print(f"Preprocessed file {self.output_path} already exists. Skipping preprocessing.")
 
-    def run_all_low_fi(self, overwrite=False):
+    def run_all_low_fi(self, overwrite=True):
         if overwrite or not os.path.exists(self.output_path):
             self.load_and_pad()
             print("saving preprocessed low fidelity data to", self.output_path)
