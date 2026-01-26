@@ -62,7 +62,7 @@ class MethodsInference:
             with torch.no_grad():
                 low_fi_pred = self.model_1(coords, params, sdf)
                 low_fi_pred_denorm = self._low_fi_denormalize(low_fi_pred)
-                low_fi_pred_residual_norm = (low_fi_pred_denorm - self.residual_stats["outputs_min"]) / (self.residual_stats["outputs_max"] - self.residual_stats["outputs_min"] + 1e-8)
+                low_fi_pred_residual_norm = (low_fi_pred_denorm - self.residual_stats["outputs_min"]) / (self.residual_stats["outputs_max"] - self.residual_stats["outputs_min"] )
                 residual_pred = self.model_2(coords, params, sdf, aux=low_fi_pred_residual_norm)
                 pred = self._residual_denormalize(residual_pred) + self._low_fi_denormalize(low_fi_pred)
         else:
