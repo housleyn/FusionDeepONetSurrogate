@@ -69,7 +69,8 @@ def make_residual_dataset(self, hf_npz_out, low_fi_stats_path, high_fi_stats_pat
 
         
         r_norm = (residuals - min_r.numpy()) / (max_r.numpy() - min_r.numpy() + 1e-8)
-        uLF_norm = (uLF - min_r.numpy()) / (max_r.numpy() - min_r.numpy() + 1e-8)
+        # uLF_norm = (uLF - min_r.numpy()) / (max_r.numpy() - min_r.numpy() + 1e-8)
+        uLF_norm = uLF
         np.savez_compressed(
             hf_npz_out,
             coords=coords,
