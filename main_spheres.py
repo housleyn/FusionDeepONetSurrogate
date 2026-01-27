@@ -2,7 +2,6 @@ from src.surrogate import Surrogate
 import os
 import yaml
 import itertools
-import numpy as np
 
 base_config = {
     "coord_dim": 3,
@@ -18,53 +17,50 @@ base_config = {
     "param_dim": 3,
     "print_every": 1,
     "test_size": 0.2,
-    "model_type": "FusionDeepONet",
     "loss_type": "mse",
-    # "low_fi_dropout": 0.0,
+    "low_fi_dropout": 0.0,
     "x_lim": [-1, 5],
-    "y_lim": [-2, 2], 
-
-
-} 
+    "y_lim": [-2, 2],
+    "lr": 0.0001,
+    "lr_gamma": 1.2,
+    "hidden_size": 32,
+    "num_hidden_layers": 6,
+    "batch_size": 16,
+    "shuffle": True,
+    "dropout": 0.4,
+}
 
 hyperparams = {
-    "lr": [0.0001],
-    "lr_gamma": [0.8, 1.2, 1.5],
-    "hidden_size": [32, 64, 128],
-    "num_hidden_layers": [3, 4, 5, 6, 7, 8],
-    "batch_size": [8, 16, 32, 36],
-    "shuffle": [True, False],
-    # "dropout": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+    "model_type": ["vanilla", "FusionDeepONet"],
 }
 
 all_combinations = list(itertools.product(*hyperparams.values()))
 param_names = list(hyperparams.keys())
 
-np.random.seed(42)
-sample_size = 25
-sampled_indices = np.random.choice(len(all_combinations), size=sample_size, replace=False)
-sampled_combinations = [all_combinations[i] for i in sampled_indices]
-
 os.makedirs("configs", exist_ok=True)
 
-for i, combination in enumerate(sampled_combinations):
+config_paths = []
+
+for combination in all_combinations:
     config = base_config.copy()
-    
+
     for param_name, param_value in zip(param_names, combination):
         config[param_name] = param_value
 
-    config["project_name"] = f"spheres_fusion_sweep_{i}"
+    model_type = config["model_type"]
 
-    config_filename = f"configs/spheres_fusion_sweep_{i}.yaml"
+    # ✅ model-type-based naming (no index)
+    config["project_name"] = f"spheres_{model_type}"
+    config_filename = f"configs/spheres_{model_type}.yaml"
+
     with open(config_filename, "w") as f:
         yaml.dump(config, f)
 
-if __name__ == "__main__":
-    # for i in range(len(sampled_combinations)):
-    config_path = f"configs/spheres_fusion_sweep_0.yaml"
+    config_paths.append(config_filename)
 
-    surrogate = Surrogate(config_path=config_path)
-    surrogate._train()
-    # surrogate._infer_and_validate(file="Data/spheres_data_150/sf_x1.515288712_y-13.03213444Mach8.262405742.csv")
-    # surrogate._infer_all_unseen(folder="Data/spheres_unseen_20")
-    
+if __name__ == "__main__":
+    for config_path in config_paths:
+        surrogate = Surrogate(config_path=config_path)
+        surrogate._train()
+        surrogate._infer_and_validate(file="Data/spheres_data/sf_x0.987469695_y5.704220557Mach12.1369777.csv")
+        # surrogate._infer_all_unseen(folder="Data/spheres_unseen_20")
