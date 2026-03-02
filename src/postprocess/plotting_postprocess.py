@@ -349,12 +349,19 @@ def compute_surface_percent_differences(
         aoa_deg = 0.0
 
     aoa_rad = np.deg2rad(aoa_deg)
-    e_inf = np.array([np.cos(aoa_rad), 0, np.sin(aoa_rad)])
-    e_inf /= (np.linalg.norm(e_inf) + 1e-15)
 
-    e_drag = e_inf
-    e_lift = np.array([-np.sin(aoa_rad), 0, np.cos(aoa_rad)])
+    if np.allclose(A_vec_s[:, 2], 0.0, atol=1e-12):
+        # use X–Y plane
+        e_inf  = np.array([np.cos(aoa_rad), np.sin(aoa_rad), 0.0], float)
+        e_lift = np.array([-np.sin(aoa_rad), np.cos(aoa_rad), 0.0], float)
+    else:
+        # fall back to your old X–Z convention
+        e_inf  = np.array([np.cos(aoa_rad), 0.0, np.sin(aoa_rad)], float)
+        e_lift = np.array([-np.sin(aoa_rad), 0.0, np.cos(aoa_rad)], float)
+
+    e_inf  /= (np.linalg.norm(e_inf)  + 1e-15)
     e_lift /= (np.linalg.norm(e_lift) + 1e-15)
+    e_drag = e_inf
 
     # --- Integrate forces ---
     F_true = -np.sum(p_true_s[:, None] * A_vec_s, axis=0)

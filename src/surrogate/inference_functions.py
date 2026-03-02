@@ -33,7 +33,7 @@ def inference(self, file):
     inference.save_to_csv(coords_np, output, out_path=self.predicted_output_file)
     print(f"Inference complete. Output saved to {self.predicted_output_file}.")
     print("Beginning postprocessing...")
-    postprocess = Postprocess(self.project_name, path_true=None, path_pred=self.predicted_output_file) #wrong
+    postprocess = Postprocess(config_path=self.config_path, path_true=None, path_pred=self.predicted_output_file) 
     postprocess._plot_predicted_only(params)
     
 def infer_all_unseen(self, folder):
