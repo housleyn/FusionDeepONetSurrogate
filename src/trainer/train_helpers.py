@@ -19,7 +19,7 @@ def train_one_epoch(self, train_loader):
 
         self.optimizer.zero_grad()
         outputs = self.model(coords, params, sdf, aux=aux)
-        loss = self.criterion(outputs, targets)
+        loss = weighted_mse(outputs, targets, self.loss_w_logits)
         loss.backward()
         self.optimizer.step()
 
@@ -55,3 +55,9 @@ def load_best_weights(self, path):
     checkpoint = torch.load(path, map_location=self.device)
     self.model.load_state_dict(checkpoint["model_state_dict"])
     self.model.eval()
+
+def weighted_mse(outputs: torch.Tensor, targets: torch.Tensor, w_logits: torch.Tensor):
+    per_channel_mse = (outputs - targets).pow(2).mean(dim=tuple(range(outputs.ndim - 1)))
+    w = torch.softmax(w_logits, dim=0)
+    loss = (w * per_channel_mse).sum()
+    return loss
