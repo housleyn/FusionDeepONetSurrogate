@@ -1,7 +1,7 @@
 import torch
 import os
 import time
-from .train_helpers import (to_device_batch, train_one_epoch, save_best_checkpoint_if_needed, print_epoch, load_best_weights)
+from .train_helpers import (to_device_batch, train_one_epoch, save_best_checkpoint_if_needed, print_epoch, load_best_weights, weighted_mse)
 
 class MethodsTrainer:
     
@@ -43,7 +43,7 @@ class MethodsTrainer:
             for batch in dataloader:
                 coords, params, targets, sdf, aux = to_device_batch(self, batch)
                 outputs = self.model(coords, params, sdf, aux=aux)
-                loss = self.criterion(outputs, targets)
+                loss = weighted_mse(outputs, targets, self.loss_w_logits)
                 bs = targets.size(0)
                 total_loss += loss.item() * bs
                 total_samples += bs

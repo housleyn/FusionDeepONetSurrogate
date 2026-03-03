@@ -14,14 +14,17 @@ if __name__ == "__main__":
 
 
     # x43 = Surrogate(config_path="configs/x_43_sequential.yaml")
+    # x43._train()
     # x43._infer_and_validate(file="Data/x_43_data/x_43_a21.150067306_a322.39658073_a44.094249377.csv")
+    # x43._infer_all_unseen(folder="Data/x_43_unseen_20")
 
-    # spheres = Surrogate(config_path="configs/spheres_fusion.yaml")
+    spheres = Surrogate(config_path="configs/spheres_fusion.yaml")
     # spheres._train()
-    # spheres._infer_and_validate(file="Data/spheres_data/sf_x-0.015747631_y-2.700769227Mach15.81325245.csv")
+    # spheres._infer_and_validate(file="Data/spheres_data/sf_x9.778213128263568_y4.983763791274738.csv")
+    spheres._infer_all_unseen(folder="Data/spheres_unseen_20")
 
-    waverider = Surrogate(config_path="configs/waverider.yaml")
-    waverider._train()
-    waverider._infer_and_validate(file="Data/waverider_hf_data/3D_slice_Mach_11.7700_z_-4.500000.csv")
-    waverider._infer_all_unseen(folder="Data/waverider_unseen")
+    # waverider = Surrogate(config_path="configs/waverider.yaml")
+    # waverider._train()
+    # waverider._infer_and_validate(file="Data/waverider_hf_data/3D_slice_Mach_11.7700_z_-4.500000.csv")
+    # waverider._infer_all_unseen(folder="Data/waverider_unseen")
     

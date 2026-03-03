@@ -7,7 +7,7 @@ class BaseTrainer:
         self.model = model.to(device)
         self.dataloader = dataloader
         self.device = device
-        self.loss_w_logits = nn.Parameter(torch.zeros(6))
+        self.loss_w_logits = nn.Parameter(torch.zeros(6,device=self.device))
         # self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(list(self.model.parameters()) + [self.loss_w_logits], lr=lr)
         self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=lr_gamma)
