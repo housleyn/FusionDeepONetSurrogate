@@ -68,7 +68,7 @@ def infer_all_unseen(self, folder):
         print(f"Inference complete. Output saved to {predicted_output}.")
 
         postprocess = Postprocess(config_path=self.config_path, path_true=file_path, path_pred=predicted_output)
-        file_errors = dict(postprocess.get_errors())
+        file_errors = dict(postprocess.get_errors(self.dimension))
         errors.append(file_errors)
 
     

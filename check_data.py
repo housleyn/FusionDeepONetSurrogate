@@ -5,15 +5,20 @@ import pandas as pd
 # =========================
 # CONFIG
 # =========================
-FOLDER = os.path.join("Data", "spheres_data_150")
+FOLDER = os.path.join("Data", "waverider_lf_data")
 
 FLOW_COLS = [
+    # flow
     "Velocity[i] (m/s)",
     "Velocity[j] (m/s)",
     "Velocity[k] (m/s)",
     "Absolute Pressure (Pa)",
     "Density (kg/m^3)",
     "Temperature (K)",
+    # surface + geometry (needed for your surface percent-diff function)
+    "X (m)", "Y (m)", "Z (m)",
+    "is_on_surface",
+    "Area[i] (m^2)", "Area[j] (m^2)", "Area[k] (m^2)",
 ]
 
 # Global "extremely large" fallback threshold
@@ -81,6 +86,37 @@ def check_file(path: str) -> dict:
         return rep
 
     num = coerce_numeric(df, present_cols)
+        # -------------------------
+    # Surface-specific checks
+    # -------------------------
+    needed_surface = ["is_on_surface", "Area[i] (m^2)", "Area[j] (m^2)", "Area[k] (m^2)"]
+    if all(c in df.columns for c in needed_surface):
+        iso = pd.to_numeric(df["is_on_surface"], errors="coerce").to_numpy()
+        rep["notes"].append(f"is_on_surface unique (first 10): {np.unique(iso[~np.isnan(iso)])[:10].tolist()}")
+
+        # invalid flags
+        invalid_iso = np.isfinite(iso) & ~np.isin(iso, [0, 1])
+        if invalid_iso.any():
+            rep["is_corrupted"] = True
+            rep["notes"].append(f"is_on_surface has non-(0/1) values: {int(invalid_iso.sum())} rows")
+
+        # empty surface
+        surf_mask = (iso == 1)
+        surf_count = int(np.nansum(surf_mask))
+        if surf_count == 0:
+            rep["is_corrupted"] = True
+            rep["notes"].append("No surface rows found where is_on_surface==1")
+
+        # zero/invalid area magnitude on surface
+        Ai = pd.to_numeric(df["Area[i] (m^2)"], errors="coerce").to_numpy(dtype=np.float64)
+        Aj = pd.to_numeric(df["Area[j] (m^2)"], errors="coerce").to_numpy(dtype=np.float64)
+        Ak = pd.to_numeric(df["Area[k] (m^2)"], errors="coerce").to_numpy(dtype=np.float64)
+
+        Amag = np.sqrt(Ai**2 + Aj**2 + Ak**2)
+        bad_area = surf_mask & (~np.isfinite(Amag) | (Amag <= 0))
+        if bad_area.any():
+            rep["is_corrupted"] = True
+            rep["notes"].append(f"Surface rows with non-finite or zero |Area|: {int(bad_area.sum())} rows")
     data = num.to_numpy(dtype=np.float64)
 
     # Counts

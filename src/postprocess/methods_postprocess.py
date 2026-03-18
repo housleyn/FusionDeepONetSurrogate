@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from .plotting_postprocess import (create_table, plot_fields, compute_surface_percent_differences, create_surface_metrics_table)
+from .more_plotting_postprocess import plot_surface_temperature_profile
 
 class MethodsPostprocess:
     def run(self, dimension):
@@ -18,10 +19,13 @@ class MethodsPostprocess:
             metrics=surface_metrics,
             save_path=os.path.join(self.tables_dir, "surface_metric_errors.png")
         )
+        plot_surface_temperature_profile(self, save_path=os.path.join(self.figures_dir, "surface_temperature_profile.png"))
 
-    def get_errors(self):
+    def get_errors(self, dimension):
         self._calculate_error()
         fields = self.fields 
+        if dimension == 3:
+            fields.insert(2, "Velocity[k] (m/s)")
         for field in fields:
             self._calculate_relative_l2_error(field)
         return self.errors.items()

@@ -1,71 +1,92 @@
-from src.surrogate import Surrogate
 import os
 import yaml
-import itertools
-import numpy as np
+from copy import deepcopy
+from src.surrogate import Surrogate
 
-base_config = {
-    "coord_dim": 3,
-    "distance_dim": 1,
-    "distance_columns": ["distanceToSurface"],
-    "data_folder": "Data/x_43_data_36",
-    "low_fi_data_folder": "Data/x_43_low_fi_data_72",
-    "dimension": 2,
-    "lhs_sample": 500000,
-    "num_epochs": 50000,
-    "output_dim": 6,
-    "param_columns": ["a2", "a3", "a4"],
-    "param_dim": 3,
-    "print_every": 1,
-    "test_size": 0.2,
-    "loss_type": "mse",
-    "dist_threshold": .01,
-    "edge_percentile": .001,
-    "x_lim": [-1, 5],
-    "y_lim": [-2, 2],
-    "lr": 0.0001,
-    "lr_gamma": 1.5,
-    "hidden_size": 32,
-    "num_hidden_layers": 6,
-    "batch_size": 8,
-    "shuffle": True,
-    "dropout": 0.1,
-    "low_fi_dropout": 0.0,
-}
+BASE_YAML = "configs/x_43_sequential.yaml"
 
-hyperparams = {
-    "model_type": ["vanilla", "FusionDeepONet"]
-}
+DATA_PAIRS = [
+    ("Data/x_43_data_subset_18",  "Data/x_43_low_fi_data_subset_18"),
+    ("Data/x_43_data_subset_144", "Data/x_43_low_fi_data_subset_144"),
+]
 
-all_combinations = list(itertools.product(*hyperparams.values()))
-param_names = list(hyperparams.keys())
+OUT_DIR = "configs/sweeps/x_43_sequential"
+UNSEEN_FOLDER = "Data/x_43_unseen_20"
 
-os.makedirs("configs", exist_ok=True)
 
-config_paths = []
+def _load_yaml(path):
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
 
-for combination in all_combinations:
-    config = base_config.copy()
 
-    for param_name, param_value in zip(param_names, combination):
-        config[param_name] = param_value
+def _save_yaml(path, cfg):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        yaml.dump(cfg, f, sort_keys=False)
 
-    model_type = config["model_type"]
 
-    # ✅ model-type-based naming (no index)
-    config["project_name"] = f"x_43_{model_type}"
-    config_filename = f"configs/x_43_{model_type}.yaml"
+def _subset_tag(folder: str) -> str:
+    tail = os.path.basename(folder)
+    return tail.split("_")[-1]  # e.g. "18", "72", "144", "200"
 
-    with open(config_filename, "w") as f:
-        yaml.dump(config, f)
 
-    config_paths.append(config_filename)
+def _run_name(cfg):
+    subset_tag = _subset_tag(cfg["data_folder"])
+    return f"x_43_sequential_N{subset_tag}"
+
+
+def build_run_specs():
+    base_cfg = _load_yaml(BASE_YAML)
+    specs = []
+
+    for hf_folder, lf_folder in DATA_PAIRS:
+        cfg = deepcopy(base_cfg)
+
+        cfg["data_folder"] = hf_folder
+        cfg["low_fi_data_folder"] = lf_folder
+
+        name = _run_name(cfg)
+        cfg["project_name"] = name
+
+        cfg_path = os.path.join(OUT_DIR, f"{name}.yaml")
+        specs.append((name, cfg_path, cfg))
+
+    return specs
+
+
+def run_one(cfg_path):
+    s = Surrogate(config_path=cfg_path)
+    s._train()
+    if UNSEEN_FOLDER:
+        s._infer_all_unseen(folder=UNSEEN_FOLDER)
+
 
 if __name__ == "__main__":
-    for config_path in config_paths:
-        surrogate = Surrogate(config_path=config_path)
-        surrogate._train()
-        surrogate._infer_and_validate(
-            file="Data/x_43_data_36/x_43_a21.8550107_a316.33293864_a410.25707196.csv"
+    specs = build_run_specs()
+
+    # Always rewrite configs so they match the current sweep
+    for name, cfg_path, cfg in specs:
+        _save_yaml(cfg_path, cfg)
+
+    print(f"Generated {len(specs)} configs in: {OUT_DIR}")
+    print("Example:", specs[0][1] if specs else "none")
+
+    slurm_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+
+    # Local mode
+    if slurm_id is None:
+        for name, cfg_path, _ in specs:
+            print(f"\n=== LOCAL === {name} -> {cfg_path}")
+            run_one(cfg_path)
+        raise SystemExit(0)
+
+    # Slurm array mode
+    idx = int(slurm_id)   # assumes --array=0-3
+    if idx < 0 or idx >= len(specs):
+        raise IndexError(
+            f"SLURM_ARRAY_TASK_ID={idx} out of range (0..{len(specs)-1})"
         )
-        surrogate._infer_all_unseen(folder="Data/x_43_unseen")
+
+    name, cfg_path, _ = specs[idx]
+    print(f"\n=== SLURM TASK {idx} === {name} -> {cfg_path}")
+    run_one(cfg_path)

@@ -28,5 +28,5 @@ def count_trainable_params(checkpoint_path):
     return trainable_params
 
 # ===== USAGE =====
-path = "Outputs\\orion_multi\\model\\low_fi_fusion_deeponet.pt"
+path = "Outputs/single_waverider_multi/model/low_fi_fusion_deeponet.pt"
 print("Trainable parameters:", f"{count_trainable_params(path):,}")

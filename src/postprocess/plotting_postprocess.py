@@ -350,14 +350,14 @@ def compute_surface_percent_differences(
 
     aoa_rad = np.deg2rad(aoa_deg)
 
-    if np.allclose(A_vec_s[:, 2], 0.0, atol=1e-12):
-        # use X–Y plane
-        e_inf  = np.array([np.cos(aoa_rad), np.sin(aoa_rad), 0.0], float)
-        e_lift = np.array([-np.sin(aoa_rad), np.cos(aoa_rad), 0.0], float)
-    else:
-        # fall back to your old X–Z convention
+    if "AoA" in self.param_columns:
+        # varying-AoA case: use original X-Z convention
         e_inf  = np.array([np.cos(aoa_rad), 0.0, np.sin(aoa_rad)], float)
         e_lift = np.array([-np.sin(aoa_rad), 0.0, np.cos(aoa_rad)], float)
+    else:
+        # no-AoA case: use X-Y convention
+        e_inf  = np.array([1.0, 0.0, 0.0], float)
+        e_lift = np.array([0.0, 1.0, 0.0], float)
 
     e_inf  /= (np.linalg.norm(e_inf)  + 1e-15)
     e_lift /= (np.linalg.norm(e_lift) + 1e-15)
@@ -379,20 +379,29 @@ def compute_surface_percent_differences(
     Cl_percent = percent_diff(Cl_pred, Cl_true)
 
     # --- Wall Temperature Proxy (NO gradients) ---
-    Q_true = float(np.sum(T_true_s * A_norm_s))
-    Q_pred = float(np.sum(T_pred_s * A_norm_s))
-    Heat_percent = percent_diff(Q_pred, Q_true)
+    T_rel_l2_percent = float(
+    np.linalg.norm(T_pred_s - T_true_s) /
+    (np.linalg.norm(T_true_s) + coef_eps) * 100
+    )
+
+    T_mape_percent = float(
+        np.mean(np.abs((T_pred_s - T_true_s) / (T_true_s + coef_eps))) * 100
+    )
+
+    T_max_percent = float(
+        np.max(np.abs((T_pred_s - T_true_s) / (T_true_s + coef_eps))) * 100
+    )
 
     return {
         "Cd_percent_diff": Cd_percent,
         "Cl_percent_diff": Cl_percent,
-        "Heat_percent_diff": Heat_percent,
         "Cd_true_proxy": Cd_true,
         "Cd_pred_proxy": Cd_pred,
         "Cl_true_proxy": Cl_true,
         "Cl_pred_proxy": Cl_pred,
-        "Q_true_proxy": Q_true,
-        "Q_pred_proxy": Q_pred,
+        "T_rel_l2_percent_diff": T_rel_l2_percent,
+        "T_mape_percent_diff": T_mape_percent,
+        "T_max_percent_diff": T_max_percent,
         "num_surface_cells": int(surface_mask.sum()),
     }
 
@@ -405,13 +414,17 @@ def create_surface_metrics_table(metrics: dict, save_path: str):
 
     Cd_percent = metrics.get("Cd_percent_diff", None)
     Cl_percent = metrics.get("Cl_percent_diff", None)
-    Heat_percent = metrics.get("Heat_percent_diff", None)
+    T_rel_l2_percent = metrics.get("T_rel_l2_percent_diff", None)
+    T_mape_percent = metrics.get("T_mape_percent_diff", None)
+    T_max_percent = metrics.get("T_max_percent_diff", None)
 
     table_data = [
         ["Metric", "Percent Error (%)"],
         ["Cd Error", f"{Cd_percent:.2f}"],
         ["Cl Error", f"{Cl_percent:.2f}"],
-        ["Wall Temperature Error", f"{Heat_percent:.2f}"],
+        ["Wall Temperature Error", f"{T_rel_l2_percent:.2f}"],
+        ["Wall Temperature MAPE", f"{T_mape_percent:.2f}"],
+        ["Wall Temperature Max % Error", f"{T_max_percent:.2f}"],
     ]
 
     fig, ax = plt.subplots(figsize=(10, 2))
