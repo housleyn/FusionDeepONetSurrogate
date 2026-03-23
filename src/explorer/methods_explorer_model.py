@@ -260,7 +260,7 @@ class MethodsExplorerModel:
         field_name,
         output_plot,
         levels=100,
-        cmap="viridis",
+        cmap="inferno",
         vmin=None,
         vmax=None,
     ):

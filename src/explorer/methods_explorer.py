@@ -104,7 +104,12 @@ def build_single_case(
 
     rng = np.random.default_rng(seed)
 
-    surf_main = sample_surface(center_main, n_surface_each, radius=radius, angle_offset=0.0)
+    surf_main = sample_surface(
+        center_main,
+        n_surface_each,
+        radius=radius,
+        angle_offset=0.0,
+    )
     surf_secondary = sample_surface(
         center_secondary,
         n_surface_each,
@@ -192,6 +197,40 @@ def build_single_case(
         radius=radius,
     )
 
+    # --- Real area vectors for surface points ---
+    area_i = np.zeros(len(points), dtype=float)
+    area_j = np.zeros(len(points), dtype=float)
+    area_k = np.zeros(len(points), dtype=float)
+
+    ds = 2.0 * np.pi * radius / n_surface_each
+
+    # Main sphere surface normals
+    main_surface_pts = points[:n_surface_each]
+    rx_main = main_surface_pts[:, 0] - center_main[0]
+    ry_main = main_surface_pts[:, 1] - center_main[1]
+    rmag_main = np.sqrt(rx_main**2 + ry_main**2) + 1e-15
+    nx_main = rx_main / rmag_main
+    ny_main = ry_main / rmag_main
+
+    area_i[:n_surface_each] = nx_main * ds
+    area_j[:n_surface_each] = ny_main * ds
+    area_k[:n_surface_each] = 0.0
+
+    # Secondary sphere surface normals
+    sec_start = n_surface_each
+    sec_end = 2 * n_surface_each
+    sec_surface_pts = points[sec_start:sec_end]
+
+    rx_sec = sec_surface_pts[:, 0] - center_secondary[0]
+    ry_sec = sec_surface_pts[:, 1] - center_secondary[1]
+    rmag_sec = np.sqrt(rx_sec**2 + ry_sec**2) + 1e-15
+    nx_sec = rx_sec / rmag_sec
+    ny_sec = ry_sec / rmag_sec
+
+    area_i[sec_start:sec_end] = nx_sec * ds
+    area_j[sec_start:sec_end] = ny_sec * ds
+    area_k[sec_start:sec_end] = 0.0
+
     df = pd.DataFrame({
         "Velocity[i] (m/s)": np.nan,
         "Velocity[j] (m/s)": np.nan,
@@ -204,9 +243,9 @@ def build_single_case(
         "Mach_field": np.full(len(points), mach, dtype=float),
         "distanceToSurface": dist,
         "is_on_surface": is_surface,
-        "Area[i] (m^2)": np.full(len(points), FLOAT_MAX, dtype=float),
-        "Area[j] (m^2)": np.full(len(points), FLOAT_MAX, dtype=float),
-        "Area[k] (m^2)": np.full(len(points), FLOAT_MAX, dtype=float),
+        "Area[i] (m^2)": area_i,
+        "Area[j] (m^2)": area_j,
+        "Area[k] (m^2)": area_k,
         "X (m)": x,
         "Y (m)": y,
         "Z (m)": z,
