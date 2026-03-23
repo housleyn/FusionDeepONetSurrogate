@@ -13,16 +13,17 @@ if __name__ == "__main__":
     # orion._infer_all_unseen(folder="Data/orion_unseen_32")
 
 
-    # x43 = Surrogate(config_path="configs/x_43_vanilla.yaml")
+    x43 = Surrogate(config_path="configs/x_43_transfer_learning_test.yaml")
+    x43._train()
     # x43._infer_and_validate(file="Data/x_43_data/x_43_a21.150067306_a322.39658073_a44.094249377.csv")
     # x432 = Surrogate(config_path="configs/x_43_multi.yaml")
     # x432._infer_and_validate(file="Data/x_43_data/x_43_a21.402224565_a311.43154317_a412.4105254.csv")
     # x433 = Surrogate(config_path="configs/x_43_sequential.yaml")
     # x433._infer_and_validate(file="Data/x_43_data/x_43_a21.402224565_a311.43154317_a412.4105254.csv")
 
-    spheres = Surrogate(config_path="configs/spheres_fusion.yaml")
+    # spheres = Surrogate(config_path="configs/spheres_fusion.yaml")
     # spheres._train()
-    spheres._infer_and_validate(file="Data/spheres_unseen_20/sf_x1.0662246796756665_y4.335984435513547.csv")
+    # spheres._infer_and_validate(file="Data/spheres_unseen_20/sf_x1.0662246796756665_y4.335984435513547.csv")
 
     # waverider1 = Surrogate(config_path="configs/waverider_fusion.yaml")
     # waverider._train()

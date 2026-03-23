@@ -18,7 +18,11 @@ def train_one_epoch(self, train_loader):
         coords, params, targets, sdf, aux = to_device_batch(self, batch)
 
         self.optimizer.zero_grad()
-        outputs = self.model(coords, params, sdf, aux=aux)
+        if getattr(self.model, "aux_dim", 0):
+            outputs = self.model(coords, params, sdf, aux=aux)
+        else:
+            outputs = self.model(coords, params, sdf)
+        # outputs = self.model(coords, params, sdf, aux=aux)
         loss = self.criterion(outputs, targets)
         loss.backward()
         self.optimizer.step()

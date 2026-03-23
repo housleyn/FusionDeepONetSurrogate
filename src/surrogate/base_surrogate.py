@@ -37,6 +37,7 @@ class BaseSurrogate:
         self.edge_percentile = config.get("edge_percentile", 99.5)
         self.x_lim = config.get("x_lim", None)
         self.y_lim = config.get("y_lim", None)
+        
 
 
         self.project_root = os.path.dirname(
@@ -61,4 +62,8 @@ class BaseSurrogate:
         self.predicted_output_file = os.path.join(
             self.project_root, "Outputs", self.project_name, "predicted_output.csv"
         )
-        
+        self.use_transfer_learning = config.get("use_transfer_learning", False)
+        self.transfer_learning_mode = config.get("transfer_learning_mode", "partial")  
+        self.transfer_source_model_path = config.get("transfer_source_model_path", self.low_fi_model_path if self.model_type == "low_fi_fusion" else None)
+        self.transfer_exclude_prefixes = config.get("transfer_exclude_prefixes", [])
+        self.use_lf_augmentation = config.get("use_lf_augmentation", True)

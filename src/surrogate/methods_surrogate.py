@@ -66,8 +66,18 @@ class MethodsSurrogate:
             residual = Data(residual_npz)
             res_train_loader, res_test_loader = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
             print("Residual dataset created and loaded.")
-            self.model = FusionDeepONet(coord_dim=self.coord_dim + self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size,
-                                        num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, aux_dim=self.output_dim, dropout=self.dropout).to(self.device)
+            aux_dim = self.output_dim if self.use_lf_augmentation else 0
+
+            self.model = FusionDeepONet(
+                coord_dim=self.coord_dim + self.distance_dim,
+                param_dim=self.param_dim,
+                hidden_size=self.hidden_size,
+                num_hidden_layers=self.num_hidden_layers,
+                out_dim=self.output_dim,
+                aux_dim=aux_dim,
+                dropout=self.dropout
+            ).to(self.device)
+            self.model = self._load_transfer_weights(self.model)
             trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, 
                                     lr_gamma=self.lr_gamma)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
@@ -107,4 +117,64 @@ class MethodsSurrogate:
             "outputs_mean": torch.tensor(data["outputs_mean"], dtype=torch.float32),
             "outputs_std": torch.tensor(data["outputs_std"], dtype=torch.float32),
         }
+    
+    def _load_transfer_weights(self, target_model):
+        if not self.use_transfer_learning:
+            print("Transfer learning disabled.")
+            return target_model
+
+        if not self.transfer_source_model_path:
+            print("No transfer source model path provided. Skipping transfer learning.")
+            return target_model
+
+        if not os.path.exists(self.transfer_source_model_path):
+            print(f"Transfer source model not found: {self.transfer_source_model_path}")
+            return target_model
+
+        print(f"Loading transfer weights from: {self.transfer_source_model_path}")
+        source_state = torch.load(self.transfer_source_model_path, map_location=self.device)
+
+        # if checkpoint dict was saved instead of raw state_dict
+        if isinstance(source_state, dict) and "model_state_dict" in source_state:
+            source_state = source_state["model_state_dict"]
+
+        target_state = target_model.state_dict()
+
+        copied, skipped_shape, skipped_name = [], [], []
+
+        for name, param in source_state.items():
+            if name in self.transfer_exclude_prefixes:
+                skipped_name.append(name)
+                continue
+
+            if name in target_state:
+                if target_state[name].shape == param.shape:
+                    target_state[name] = param
+                    copied.append(name)
+                else:
+                    skipped_shape.append(
+                        (name, tuple(param.shape), tuple(target_state[name].shape))
+                    )
+            else:
+                skipped_name.append(name)
+
+        target_model.load_state_dict(target_state, strict=False)
+
+        print(f"Transferred {len(copied)} tensors.")
+        if copied:
+            print("Copied parameter names:")
+            for n in copied:
+                print(f"  {n}")
+
+        if skipped_shape:
+            print("Skipped due to shape mismatch:")
+            for n, src_shape, tgt_shape in skipped_shape:
+                print(f"  {n}: source {src_shape} -> target {tgt_shape}")
+
+        if skipped_name:
+            print("Skipped due to missing/unmatched names:")
+            for n in skipped_name:
+                print(f"  {n}")
+
+        return target_model
 

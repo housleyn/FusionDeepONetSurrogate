@@ -1,17 +1,21 @@
 import os
 import yaml
 from copy import deepcopy
+from itertools import product
 from src.surrogate import Surrogate
 
-BASE_YAML = "configs/x_43_sequential.yaml"
+BASE_YAML = "configs/x_43_transfer_learning_test.yaml"
 
 DATA_PAIRS = [
-    ("Data/x_43_data_subset_18",  "Data/x_43_low_fi_data_subset_18"),
-    ("Data/x_43_data_subset_144", "Data/x_43_low_fi_data_subset_144"),
+    ("Data/x_43_data_36", "Data/x_43_low_fi_data_72"),  # multifidelity
+    ("Data/x_43_data_36", "Data/x_43_data_36"),         # sequential
 ]
 
-OUT_DIR = "configs/sweeps/x_43_sequential"
+OUT_DIR = "configs/sweeps/x_43_transfer_ablation"
 UNSEEN_FOLDER = "Data/x_43_unseen_20"
+
+AUGMENTATION_OPTIONS = [False, True]
+TRANSFER_OPTIONS = [False, True]
 
 
 def _load_yaml(path):
@@ -27,23 +31,39 @@ def _save_yaml(path, cfg):
 
 def _subset_tag(folder: str) -> str:
     tail = os.path.basename(folder)
-    return tail.split("_")[-1]  # e.g. "18", "72", "144", "200"
+    return tail.split("_")[-1]
+
+
+def _bool_tag(value: bool, true_tag: str, false_tag: str) -> str:
+    return true_tag if value else false_tag
+
+
+def _mode_tag(hf_folder: str, lf_folder: str) -> str:
+    return "seq" if hf_folder == lf_folder else "mf"
 
 
 def _run_name(cfg):
     subset_tag = _subset_tag(cfg["data_folder"])
-    return f"x_43_sequential_N{subset_tag}"
+    mode_tag = _mode_tag(cfg["data_folder"], cfg["low_fi_data_folder"])
+    aug_tag = _bool_tag(cfg["use_lf_augmentation"], "aug1", "aug0")
+    tl_tag = _bool_tag(cfg["use_transfer_learning"], "tl1", "tl0")
+    return f"x43_{mode_tag}_N{subset_tag}_{aug_tag}_{tl_tag}"
 
 
 def build_run_specs():
     base_cfg = _load_yaml(BASE_YAML)
     specs = []
 
-    for hf_folder, lf_folder in DATA_PAIRS:
+    for (hf_folder, lf_folder), use_aug, use_tl in product(
+        DATA_PAIRS,
+        AUGMENTATION_OPTIONS,
+        TRANSFER_OPTIONS,
+    ):
         cfg = deepcopy(base_cfg)
-
         cfg["data_folder"] = hf_folder
         cfg["low_fi_data_folder"] = lf_folder
+        cfg["use_lf_augmentation"] = use_aug
+        cfg["use_transfer_learning"] = use_tl
 
         name = _run_name(cfg)
         cfg["project_name"] = name
@@ -64,28 +84,24 @@ def run_one(cfg_path):
 if __name__ == "__main__":
     specs = build_run_specs()
 
-    # Always rewrite configs so they match the current sweep
     for name, cfg_path, cfg in specs:
         _save_yaml(cfg_path, cfg)
 
     print(f"Generated {len(specs)} configs in: {OUT_DIR}")
-    print("Example:", specs[0][1] if specs else "none")
+    if specs:
+        print("Example:", specs[0][1])
 
     slurm_id = os.environ.get("SLURM_ARRAY_TASK_ID")
 
-    # Local mode
     if slurm_id is None:
-        for name, cfg_path, _ in specs:
-            print(f"\n=== LOCAL === {name} -> {cfg_path}")
+        for i, (name, cfg_path, _) in enumerate(specs):
+            print(f"\n=== LOCAL RUN {i}/{len(specs)-1} === {name} -> {cfg_path}")
             run_one(cfg_path)
         raise SystemExit(0)
 
-    # Slurm array mode
-    idx = int(slurm_id)   # assumes --array=0-3
+    idx = int(slurm_id)
     if idx < 0 or idx >= len(specs):
-        raise IndexError(
-            f"SLURM_ARRAY_TASK_ID={idx} out of range (0..{len(specs)-1})"
-        )
+        raise IndexError(f"SLURM_ARRAY_TASK_ID={idx} out of range (0..{len(specs)-1})")
 
     name, cfg_path, _ = specs[idx]
     print(f"\n=== SLURM TASK {idx} === {name} -> {cfg_path}")
