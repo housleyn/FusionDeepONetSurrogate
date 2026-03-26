@@ -38,21 +38,29 @@ def inference(self, file):
     
 def infer_all_unseen(self, folder):
     errors = []
+
     for filename in os.listdir(folder):
         file_path = os.path.join(folder, filename)
 
         if self.model_type == "low_fi_fusion":
-            stats_path = os.path.join(self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz")
+            stats_path = os.path.join(
+                self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
+            )
             low_fi_stats_path = stats_path
             inference = Inference(
-                self.project_name, config_path=self.config_path, model_path=self.model_path,
-                stats_path=stats_path, low_fi_stats_path=low_fi_stats_path,
+                self.project_name,
+                config_path=self.config_path,
+                model_path=self.model_path,
+                stats_path=stats_path,
+                low_fi_stats_path=low_fi_stats_path,
                 low_fi_model_path=self.low_fi_model_path if self.model_type == "low_fi_fusion" else None
             )
         else:
             stats_path = self.npz_path
             inference = Inference(
-                self.project_name, config_path=self.config_path, model_path=self.model_path,
+                self.project_name,
+                config_path=self.config_path,
+                model_path=self.model_path,
                 stats_path=stats_path,
                 low_fi_model_path=self.low_fi_model_path if self.model_type == "low_fi_fusion" else None
             )
@@ -67,18 +75,21 @@ def infer_all_unseen(self, folder):
         inference.save_to_csv(coords_np, output, out_path=predicted_output)
         print(f"Inference complete. Output saved to {predicted_output}.")
 
-        postprocess = Postprocess(config_path=self.config_path, path_true=file_path, path_pred=predicted_output)
+        postprocess = Postprocess(
+            config_path=self.config_path,
+            path_true=file_path,
+            path_pred=predicted_output
+        )
         file_errors = dict(postprocess.get_errors(self.dimension))
         errors.append(file_errors)
 
-    
     field_aggregates = {}
     for fe in errors:
         if not isinstance(fe, dict):
             continue
-        for field, vals in fe.items():
-            arr = np.asarray(vals).ravel()
-            field_aggregates.setdefault(field, []).append(arr)
 
-    
-    plot_all_inference_errors(self,field_aggregates)
+        for field, val in fe.items():
+            scalar = float(np.asarray(val).squeeze())
+            field_aggregates.setdefault(field, []).append(scalar)
+
+    plot_all_inference_errors(self, field_aggregates)

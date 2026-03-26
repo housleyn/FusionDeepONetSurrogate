@@ -14,7 +14,8 @@ if __name__ == "__main__":
 
 
     x43 = Surrogate(config_path="configs/x_43_transfer_learning_test.yaml")
-    x43._train()
+    # x43._train()
+    x43._infer_all_unseen(folder="Data/x_43_unseen_20")
     # x43._infer_and_validate(file="Data/x_43_data/x_43_a21.150067306_a322.39658073_a44.094249377.csv")
     # x432 = Surrogate(config_path="configs/x_43_multi.yaml")
     # x432._infer_and_validate(file="Data/x_43_data/x_43_a21.402224565_a311.43154317_a412.4105254.csv")

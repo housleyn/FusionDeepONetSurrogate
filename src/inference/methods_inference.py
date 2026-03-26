@@ -19,7 +19,15 @@ class MethodsInference:
             model_1 = Low_Fidelity_FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.npz_path)
             model_1.load_state_dict(torch.load(self.low_fi_model_path, map_location=self.device))
             model_1.eval()
-            model_2 = FusionDeepONet(coord_dim=self.coord_dim+self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, aux_dim=self.output_dim)
+            aux_dim = self.output_dim if self.use_lf_augmentation else 0
+            model_2 = FusionDeepONet(
+                coord_dim=self.coord_dim + self.distance_dim,
+                param_dim=self.param_dim,
+                hidden_size=self.hidden_size,
+                num_hidden_layers=self.num_hidden_layers,
+                out_dim=self.output_dim,
+                aux_dim=aux_dim
+            )
             model_2.load_state_dict(torch.load(path, map_location=self.device))
             model_2.eval()
             return model_1, model_2
@@ -58,9 +66,16 @@ class MethodsInference:
             with torch.no_grad():
                 low_fi_pred = self.model_1(coords, params, sdf)
                 low_fi_pred_denorm = self._low_fi_denormalize(low_fi_pred)
-                low_fi_pred_residual_norm = (low_fi_pred_denorm - self.residual_stats["outputs_mean"]) / self.residual_stats["outputs_std"]
-                residual_pred = self.model_2(coords, params, sdf, aux=low_fi_pred_residual_norm)
-                pred = self._residual_denormalize(residual_pred) + self._low_fi_denormalize(low_fi_pred)
+
+                if self.use_lf_augmentation:
+                    low_fi_pred_residual_norm = (
+                        low_fi_pred_denorm - self.residual_stats["outputs_mean"]
+                    ) / self.residual_stats["outputs_std"]
+                    residual_pred = self.model_2(coords, params, sdf, aux=low_fi_pred_residual_norm)
+                else:
+                    residual_pred = self.model_2(coords, params, sdf)
+
+                pred = self._residual_denormalize(residual_pred) + low_fi_pred_denorm
         else:
             with torch.no_grad():
                 pred = self.model(coords, params, sdf)

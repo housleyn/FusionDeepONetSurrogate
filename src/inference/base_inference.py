@@ -1,3 +1,4 @@
+from networkx import config
 import torch
 import os
 import yaml
@@ -6,6 +7,8 @@ class BaseInference:
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
         self.coord_dim = config["coord_dim"] 
+        self.use_transfer_learning = config.get("use_transfer_learning", False)
+        self.use_lf_augmentation = config.get("use_lf_augmentation", True)
         self.param_dim = config["param_dim"]
         self.hidden_size = config["hidden_size"]
         self.num_hidden_layers = config["num_hidden_layers"]
@@ -36,4 +39,5 @@ class BaseInference:
         outputs_dir = os.path.join(project_root, "Outputs")
         self.out_path = os.path.join(outputs_dir, "predicted_output.csv")
         self.project_name = project_name
+        
        
