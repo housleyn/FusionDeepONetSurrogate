@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from .plotting_postprocess import (create_table, plot_fields, compute_surface_percent_differences, create_surface_metrics_table)
-from .more_plotting_postprocess import plot_surface_temperature_profile
+from .more_plotting_postprocess import plot_surface_temperature_profile, plot_surface_arclength_map
 
 class MethodsPostprocess:
     def run(self, dimension):
@@ -16,10 +16,11 @@ class MethodsPostprocess:
         plot_fields(self)
         surface_metrics = compute_surface_percent_differences(self)
         create_surface_metrics_table(
-            metrics=surface_metrics,
-            save_path=os.path.join(self.tables_dir, "surface_metric_errors.png")
-        )
+             metrics=surface_metrics,
+             save_path=os.path.join(self.tables_dir, "surface_metric_errors.png")
+         )
         plot_surface_temperature_profile(self, save_path=os.path.join(self.figures_dir, "surface_temperature_profile.png"))
+        plot_surface_arclength_map(self)
 
     def get_errors(self, dimension):
         self._calculate_error()

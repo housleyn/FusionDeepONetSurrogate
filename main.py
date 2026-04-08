@@ -9,16 +9,16 @@ if __name__ == "__main__":
    
     # orion = Surrogate(config_path="configs/orion_sequential.yaml")
     # orion._train()
-    # orion._infer_and_validate(file="Data/orion_data/orion_data_AoA1.62290921_Mach13.06321187.csv")
+    # orion._infer_and_validate(file="Data\orion_data_100\orion_data_AoA5.703937416_Mach25.86137759.csv")
     # orion._infer_all_unseen(folder="Data/orion_unseen_32")
 
 
-    x43 = Surrogate(config_path="configs/x_43_transfer_learning_test.yaml")
+    # x43 = Surrogate(config_path="configs/x_43_transfer_learning_test.yaml")
     # x43._train()
-    x43._infer_all_unseen(folder="Data/x_43_unseen_20")
+    # x43._infer_all_unseen(folder="Data/x_43_unseen_20")
     # x43._infer_and_validate(file="Data/x_43_data/x_43_a21.150067306_a322.39658073_a44.094249377.csv")
-    # x432 = Surrogate(config_path="configs/x_43_multi.yaml")
-    # x432._infer_and_validate(file="Data/x_43_data/x_43_a21.402224565_a311.43154317_a412.4105254.csv")
+    x432 = Surrogate(config_path="configs/x_43_sequential.yaml")
+    x432._infer_and_validate(file="Data/x_43_data_36/x_43_a26.318635496_a38.645432091_a48.912298051.csv")
     # x433 = Surrogate(config_path="configs/x_43_sequential.yaml")
     # x433._infer_and_validate(file="Data/x_43_data/x_43_a21.402224565_a311.43154317_a412.4105254.csv")
 
