@@ -15,6 +15,9 @@ from src.distributed.fsdp_utils import wrap_model_for_fsdp
 
 class MethodsSurrogate:
     
+    def _is_main(self):
+        return (not self.dist.enabled) or self.dist.is_main_process
+
     def _train(self):
         try:
             if not self.dist.enabled or self.dist.is_main_process:
@@ -37,7 +40,9 @@ class MethodsSurrogate:
         if self.model_type == "low_fi_fusion":
             preprocess_low_fi = Preprocess(files=self.low_fi_files, output_path=self.low_fi_output_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
             preprocess_low_fi.run_all(overwrite=self.overwrite)
-        print("Data preprocessing complete.")
+        
+        if self._is_main():
+            print("Data preprocessing complete.")
 
     def _load_data(self):
         data = Data(self.npz_path)
@@ -46,19 +51,23 @@ class MethodsSurrogate:
             data_low_fi = Data(self.low_fi_output_path)
             self.train_loader_low_fi, self.test_loader_low_fi, self.train_sampler_low_fi, self.test_sampler_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, dist_context=self.dist)
         else:
-            self.train_loader_low_fi, self.test_loader_low_fi = None, None
-        print("Data loaded in dataloader.")
+            self.train_loader_low_fi, self.test_loader_low_fi, self.train_sampler_low_fi, self.test_sampler_low_fi = None, None, None, None
+        if self._is_main():
+            print("Data loaded in dataloader.")
 
     def _create_model(self):
         if self.model_type == "vanilla":
-            print("Using Vanilla DeepONet model.")
+            if self._is_main():
+                print("Using Vanilla DeepONet model.")
             self.model = VanillaDeepONet(self.coord_dim, self.param_dim, self.hidden_size, self.num_hidden_layers, self.output_dim)
         if self.model_type == "FusionDeepONet":
-            print("Using Fusion DeepONet model.")
+            if self._is_main():
+                print("Using Fusion DeepONet model.")
             self.model = FusionDeepONet(coord_dim=self.coord_dim + self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, 
                                         num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim)
         if self.model_type == "low_fi_fusion":
-            print("Using Low Fidelity Fusion DeepONet model.")
+            if self._is_main():
+                print("Using Low Fidelity Fusion DeepONet model.")
             self.model = Low_Fidelity_FusionDeepONet(coord_dim=self.coord_dim + self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size,
                                                      num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.low_fi_output_path, dropout=self.low_fi_dropout)
         if self.dist.enabled:
@@ -69,15 +78,22 @@ class MethodsSurrogate:
                                      lr_gamma=self.lr_gamma, train_sampler=self.train_sampler_low_fi, test_sampler=self.test_sampler_low_fi, dist_context=self.dist)
             self.loss_history, self.test_loss_history = trainer_low_fi.train(self.train_loader_low_fi, self.test_loader_low_fi, self.num_epochs, print_every=self.print_every)
             trainer_low_fi.save_model(low_fi=True)
-            plot_loss_history(self, low_fidelity=True)
-            print("Training low_fidelity complete. Loss history and model saved.")
-            print("Evaluating low_fidelity model on high_fidelity data...")
+            if self.dist.enabled:
+                self.dist.barrier()
+            if self._is_main():
+                plot_loss_history(self, low_fidelity=True)
+                print("Training low_fidelity complete. Loss history and model saved.")
+                print("Evaluating low_fidelity model on high_fidelity data...")
             
             residual_npz = os.path.join(self.project_root, "Outputs", self.project_name, "residual.npz")
-            make_residual_dataset(self, hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
+            if self._is_main():
+                make_residual_dataset(self, hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
+            if self.dist.enabled:
+                self.dist.barrier()
             residual = Data(residual_npz)
             res_train_loader, res_test_loader, self.res_train_sampler, self.res_test_sampler = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, dist_context=self.dist)
-            print("Residual dataset created and loaded.")
+            if self._is_main():
+                print("Residual dataset created and loaded.")
             aux_dim = self.output_dim if self.use_lf_augmentation else 0
 
             self.model = FusionDeepONet(
@@ -96,24 +112,39 @@ class MethodsSurrogate:
                                     lr_gamma=self.lr_gamma, train_sampler=self.res_train_sampler, test_sampler=self.res_test_sampler, dist_context=self.dist)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
             trainer_hi_fi.save_model()
-            plot_loss_history(self, low_fidelity=False)
-            print("Training high_fidelity complete. Loss history and model saved.")
+            if self.dist.enabled:
+                self.dist.barrier()
+            if self._is_main():
+                plot_loss_history(self, low_fidelity=False)
+                print("Training high_fidelity complete. Loss history and model saved.")
         else:
             trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, 
                               lr_gamma=self.lr_gamma, train_sampler=self.train_sampler, test_sampler=self.test_sampler, dist_context=self.dist)
             self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
             trainer.save_model()
-            plot_loss_history(self)
-            print("Training complete. Loss history and model saved.")
+            if self.dist.enabled:
+                self.dist.barrier()
+            if self._is_main():
+                plot_loss_history(self)
+                print("Training complete. Loss history and model saved.")
     
     def _infer_and_validate(self, file):
-        infer_and_validate(self, file)
+        if self.dist.enabled:
+            self.dist.barrier()
+        if self._is_main():
+            infer_and_validate(self, file)
         
     def _inference(self, file):
-        inference(self, file)  
+        if self.dist.enabled:
+            self.dist.barrier()
+        if self._is_main():
+            inference(self, file)  
     
     def _infer_all_unseen(self, folder):
-        infer_all_unseen(self, folder)
+        if self.dist.enabled:
+            self.dist.barrier()
+        if self._is_main():
+            infer_all_unseen(self, folder)
 
     def _get_data_files(self):
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.data_folder))
@@ -134,18 +165,21 @@ class MethodsSurrogate:
     
     def _load_transfer_weights(self, target_model):
         if not self.use_transfer_learning:
-            print("Transfer learning disabled.")
+            if self._is_main():
+                print("Transfer learning disabled.")
             return target_model
 
         if not self.transfer_source_model_path:
-            print("No transfer source model path provided. Skipping transfer learning.")
+            if self._is_main():
+                print("No transfer source model path provided. Skipping transfer learning.")
             return target_model
 
         if not os.path.exists(self.transfer_source_model_path):
-            print(f"Transfer source model not found: {self.transfer_source_model_path}")
+            if self._is_main():
+                print(f"Transfer source model not found: {self.transfer_source_model_path}")
             return target_model
-
-        print(f"Loading transfer weights from: {self.transfer_source_model_path}")
+        if self._is_main():
+            print(f"Loading transfer weights from: {self.transfer_source_model_path}")
         source_state = torch.load(self.transfer_source_model_path, map_location=self.device)
 
         # if checkpoint dict was saved instead of raw state_dict
@@ -173,22 +207,22 @@ class MethodsSurrogate:
                 skipped_name.append(name)
 
         target_model.load_state_dict(target_state, strict=False)
+        if self._is_main():
+            print(f"Transferred {len(copied)} tensors.")
+            if copied:
+                print("Copied parameter names:")
+                for n in copied:
+                    print(f"  {n}")
 
-        print(f"Transferred {len(copied)} tensors.")
-        if copied:
-            print("Copied parameter names:")
-            for n in copied:
-                print(f"  {n}")
+            if skipped_shape:
+                print("Skipped due to shape mismatch:")
+                for n, src_shape, tgt_shape in skipped_shape:
+                    print(f"  {n}: source {src_shape} -> target {tgt_shape}")
 
-        if skipped_shape:
-            print("Skipped due to shape mismatch:")
-            for n, src_shape, tgt_shape in skipped_shape:
-                print(f"  {n}: source {src_shape} -> target {tgt_shape}")
-
-        if skipped_name:
-            print("Skipped due to missing/unmatched names:")
-            for n in skipped_name:
-                print(f"  {n}")
+            if skipped_name:
+                print("Skipped due to missing/unmatched names:")
+                for n in skipped_name:
+                    print(f"  {n}")
 
         return target_model
 
