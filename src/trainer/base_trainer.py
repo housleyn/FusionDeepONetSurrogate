@@ -3,13 +3,17 @@ import torch.nn as nn
 
 
 class BaseTrainer:
-    def __init__(self, model, dataloader, device="cpu", lr=1e-3, lr_gamma=1.5, project_name="project"):
-        self.model = model.to(device)
+    def __init__(self, model, dataloader, device="cpu", lr=1e-3, lr_gamma=1.5, project_name="project", train_sampler=None, test_sampler=None, dist_context=None):
+        self.model = model
         self.dataloader = dataloader
         self.device = device
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=lr_gamma)
         self.project_name = project_name
+        self.train_sampler = train_sampler
+        self.test_sampler = test_sampler
+        self.dist = dist_context
+        
 
 

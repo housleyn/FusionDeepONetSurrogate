@@ -41,3 +41,8 @@ class DistributedContext:
     def barrier(self):
         if self.enabled and dist.is_available() and dist.is_initialized():
             dist.barrier()
+
+    def all_reduce_sum(self, value_tensor):
+        if self.enabled and dist.is_available() and dist.is_initialized():
+            dist.all_reduce(value_tensor, op=dist.ReduceOp.SUM)
+        return value_tensor

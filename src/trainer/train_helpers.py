@@ -31,20 +31,34 @@ def train_one_epoch(self, train_loader):
         epoch_loss += loss.item() * bs
         total_samples += bs
 
-    return epoch_loss / total_samples
+    stats = torch.tensor([epoch_loss, total_samples], device=self.device, dtype=torch.float64)
+    if self.dist is not None and self.dist.enabled:
+        self.dist.all_reduce_sum(stats)
+
+    return (stats[0] / stats[1]).item()
 
 def save_best_checkpoint_if_needed(self, epoch, test_loss, best_loss):
+    # Only rank 0 does anything
+    if self.dist is not None and not self.dist.is_main_process:
+        return best_loss
+
+    # Only save if improved
     if test_loss >= best_loss:
         return best_loss
 
     checkpoint = {
         "epoch": epoch,
-        "model_state_dict": self.model.state_dict(),
+        "model_state_dict": self._get_model_state_dict(),
         "optimizer_state_dict": self.optimizer.state_dict(),
         "scheduler_state_dict": self.lr_scheduler.state_dict(),
         "loss": test_loss,
     }
-    torch.save(checkpoint, f"Outputs/{self.project_name}/checkpoints/best_model.pt")
+
+    torch.save(
+        checkpoint,
+        f"Outputs/{self.project_name}/checkpoints/best_model.pt"
+    )
+
     return test_loss
 
 def print_epoch(self, epoch, avg_loss, test_loss, best_loss, epoch_time, avg_time):
@@ -57,5 +71,11 @@ def print_epoch(self, epoch, avg_loss, test_loss, best_loss, epoch_time, avg_tim
 
 def load_best_weights(self, path):
     checkpoint = torch.load(path, map_location=self.device)
-    self.model.load_state_dict(checkpoint["model_state_dict"])
+
+    if self.dist is not None and self.dist.enabled:
+        from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+        FSDP.load_state_dict(self.model, checkpoint["model_state_dict"])
+    else:
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+
     self.model.eval()
