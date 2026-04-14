@@ -11,11 +11,17 @@ import glob
 from .residual_calculations import (make_residual_dataset)
 from .inference_functions import (infer_and_validate, inference, infer_all_unseen)
 from .plotting_surrogate import (plot_loss_history)
+from src.distributed.fsdp_utils import wrap_model_for_fsdp
 
 class MethodsSurrogate:
     
     def _train(self):
-        self._preprocess_data()
+        if not self.dist.enabled or self.dist.is_main_process:
+            self._preprocess_data()
+
+        if self.dist.enabled:
+            self.dist.barrier()
+
         self._load_data()
         self._create_model()
         self._train_model()
@@ -30,10 +36,10 @@ class MethodsSurrogate:
 
     def _load_data(self):
         data = Data(self.npz_path)
-        self.train_loader, self.test_loader = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+        self.train_loader, self.test_loader, self.train_sampler, self.test_sampler = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, dist_context=self.dist)
         if self.model_type == "low_fi_fusion" and self.low_fi_output_path:
             data_low_fi = Data(self.low_fi_output_path)
-            self.train_loader_low_fi, self.test_loader_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+            self.train_loader_low_fi, self.test_loader_low_fi, self.train_sampler_low_fi, self.test_sampler_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, dist_context=self.dist)
         else:
             self.train_loader_low_fi, self.test_loader_low_fi = None, None
         print("Data loaded in dataloader.")
@@ -50,7 +56,8 @@ class MethodsSurrogate:
             print("Using Low Fidelity Fusion DeepONet model.")
             self.model = Low_Fidelity_FusionDeepONet(coord_dim=self.coord_dim + self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size,
                                                      num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.low_fi_output_path, dropout=self.low_fi_dropout)
-
+        if self.dist.enabled:
+            self.model = wrap_model_for_fsdp(self.model, self.dist)
     def _train_model(self):
         if self.model_type == "low_fi_fusion":
             trainer_low_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader_low_fi, device=self.device, lr=self.lr, 
@@ -64,7 +71,7 @@ class MethodsSurrogate:
             residual_npz = os.path.join(self.project_root, "Outputs", self.project_name, "residual.npz")
             make_residual_dataset(self, hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
             residual = Data(residual_npz)
-            res_train_loader, res_test_loader = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+            res_train_loader, res_test_loader, self.res_train_sampler, self.res_test_sampler = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, dist_context=self.dist)
             print("Residual dataset created and loaded.")
             aux_dim = self.output_dim if self.use_lf_augmentation else 0
 
@@ -78,6 +85,8 @@ class MethodsSurrogate:
                 dropout=self.dropout
             ).to(self.device)
             self.model = self._load_transfer_weights(self.model)
+            if self.dist.enabled:
+                    self.model = wrap_model_for_fsdp(self.model, self.dist)
             trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, 
                                     lr_gamma=self.lr_gamma)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)

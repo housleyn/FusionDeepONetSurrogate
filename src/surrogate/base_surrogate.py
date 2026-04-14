@@ -1,6 +1,8 @@
 import torch
 import os
 import yaml
+from src.distributed.context import DistributedContext
+
 class BaseSurrogate:
     def __init__(self, config_path):
         self.config_path = config_path
@@ -37,6 +39,7 @@ class BaseSurrogate:
         self.edge_percentile = config.get("edge_percentile", 99.5)
         self.x_lim = config.get("x_lim", None)
         self.y_lim = config.get("y_lim", None)
+        self.use_fsdp = config.get("use_fsdp", True)
         
 
 
@@ -54,7 +57,7 @@ class BaseSurrogate:
         self.low_fi_output_path = os.path.join(
             self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
         )
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if self.model_type == "low_fi_fusion":
             self.low_fi_model_path = f"Outputs/{self.project_name}/model/low_fi_fusion_deeponet.pt"
         self.model_path = f"Outputs/{self.project_name}/model/fusion_deeponet.pt"
@@ -67,3 +70,8 @@ class BaseSurrogate:
         self.transfer_source_model_path = config.get("transfer_source_model_path", self.low_fi_model_path if self.model_type == "low_fi_fusion" else None)
         self.transfer_exclude_prefixes = config.get("transfer_exclude_prefixes", [])
         self.use_lf_augmentation = config.get("use_lf_augmentation", True)
+
+        self.dist = DistributedContext(enabled=self.use_fsdp)
+        self.dist.setup()
+        if self.dist.enabled:
+            self.device = self.dist.device
