@@ -16,15 +16,20 @@ from src.distributed.fsdp_utils import wrap_model_for_fsdp
 class MethodsSurrogate:
     
     def _train(self):
-        if not self.dist.enabled or self.dist.is_main_process:
-            self._preprocess_data()
+        try:
+            if not self.dist.enabled or self.dist.is_main_process:
+                self._preprocess_data()
 
-        if self.dist.enabled:
-            self.dist.barrier()
+            if self.dist.enabled:
+                self.dist.barrier()
 
-        self._load_data()
-        self._create_model()
-        self._train_model()
+            self._load_data()
+            self._create_model()
+            self._train_model()
+
+        finally:
+            if self.dist.enabled:
+                self.dist.cleanup()
         
     def _preprocess_data(self):
         preprocess = Preprocess(files=self.files, output_path=self.output_path, param_columns=self.param_columns, distance_columns=self.distance_columns)
@@ -61,7 +66,7 @@ class MethodsSurrogate:
     def _train_model(self):
         if self.model_type == "low_fi_fusion":
             trainer_low_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader_low_fi, device=self.device, lr=self.lr, 
-                                     lr_gamma=self.lr_gamma)
+                                     lr_gamma=self.lr_gamma, train_sampler=self.train_sampler_low_fi, test_sampler=self.test_sampler_low_fi, dist_context=self.dist)
             self.loss_history, self.test_loss_history = trainer_low_fi.train(self.train_loader_low_fi, self.test_loader_low_fi, self.num_epochs, print_every=self.print_every)
             trainer_low_fi.save_model(low_fi=True)
             plot_loss_history(self, low_fidelity=True)
@@ -88,14 +93,14 @@ class MethodsSurrogate:
             if self.dist.enabled:
                     self.model = wrap_model_for_fsdp(self.model, self.dist)
             trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, 
-                                    lr_gamma=self.lr_gamma)
+                                    lr_gamma=self.lr_gamma, train_sampler=self.res_train_sampler, test_sampler=self.res_test_sampler, dist_context=self.dist)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
             trainer_hi_fi.save_model()
             plot_loss_history(self, low_fidelity=False)
             print("Training high_fidelity complete. Loss history and model saved.")
         else:
             trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, 
-                              lr_gamma=self.lr_gamma)
+                              lr_gamma=self.lr_gamma, train_sampler=self.train_sampler, test_sampler=self.test_sampler, dist_context=self.dist)
             self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
             trainer.save_model()
             plot_loss_history(self)
