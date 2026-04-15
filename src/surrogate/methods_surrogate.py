@@ -30,10 +30,10 @@ class MethodsSurrogate:
 
     def _load_data(self):
         data = Data(self.npz_path)
-        self.train_loader, self.test_loader = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+        self.train_loader, self.test_loader = data.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, num_workers=4, pin_memory=True, persistent_workers=True)
         if self.model_type == "low_fi_fusion" and self.low_fi_output_path:
             data_low_fi = Data(self.low_fi_output_path)
-            self.train_loader_low_fi, self.test_loader_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+            self.train_loader_low_fi, self.test_loader_low_fi = data_low_fi.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, num_workers=4, pin_memory=True, persistent_workers=True)
         else:
             self.train_loader_low_fi, self.test_loader_low_fi = None, None
         print("Data loaded in dataloader.")
@@ -45,16 +45,17 @@ class MethodsSurrogate:
         if self.model_type == "FusionDeepONet":
             print("Using Fusion DeepONet model.")
             self.model = FusionDeepONet(coord_dim=self.coord_dim + self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size, 
-                                        num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim)
+                                        num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, use_activation_checkpointing=self.use_activation_checkpointing)
         if self.model_type == "low_fi_fusion":
             print("Using Low Fidelity Fusion DeepONet model.")
             self.model = Low_Fidelity_FusionDeepONet(coord_dim=self.coord_dim + self.distance_dim, param_dim=self.param_dim, hidden_size=self.hidden_size,
-                                                     num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.low_fi_output_path, dropout=self.low_fi_dropout)
+                                                     num_hidden_layers=self.num_hidden_layers, out_dim=self.output_dim, npz_path=self.low_fi_output_path, dropout=self.low_fi_dropout,
+                                                     use_activation_checkpointing=self.use_activation_checkpointing)
 
     def _train_model(self):
         if self.model_type == "low_fi_fusion":
             trainer_low_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader_low_fi, device=self.device, lr=self.lr, 
-                                     lr_gamma=self.lr_gamma)
+                                     lr_gamma=self.lr_gamma, use_amp=self.use_amp, amp_dtype=self.amp_dtype)
             self.loss_history, self.test_loss_history = trainer_low_fi.train(self.train_loader_low_fi, self.test_loader_low_fi, self.num_epochs, print_every=self.print_every)
             trainer_low_fi.save_model(low_fi=True)
             plot_loss_history(self, low_fidelity=True)
@@ -64,7 +65,7 @@ class MethodsSurrogate:
             residual_npz = os.path.join(self.project_root, "Outputs", self.project_name, "residual.npz")
             make_residual_dataset(self, hf_npz_out=residual_npz,  low_fi_stats_path=self.low_fi_output_path, high_fi_stats_path=self.npz_path)
             residual = Data(residual_npz)
-            res_train_loader, res_test_loader = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size)
+            res_train_loader, res_test_loader = residual.get_dataloader(self.batch_size, shuffle=self.shuffle, test_size=self.test_size, num_workers=4, pin_memory=True, persistent_workers=True)
             print("Residual dataset created and loaded.")
             aux_dim = self.output_dim if self.use_lf_augmentation else 0
 
@@ -75,18 +76,19 @@ class MethodsSurrogate:
                 num_hidden_layers=self.num_hidden_layers,
                 out_dim=self.output_dim,
                 aux_dim=aux_dim,
-                dropout=self.dropout
+                dropout=self.dropout,
+                use_activation_checkpointing=self.use_activation_checkpointing,
             ).to(self.device)
             self.model = self._load_transfer_weights(self.model)
             trainer_hi_fi = Trainer(project_name=self.project_name, model=self.model, dataloader=res_train_loader, device=self.device, lr=self.lr, 
-                                    lr_gamma=self.lr_gamma)
+                                    lr_gamma=self.lr_gamma, use_amp=self.use_amp, amp_dtype=self.amp_dtype)
             self.loss_history, self.test_loss_history = trainer_hi_fi.train(res_train_loader, res_test_loader, self.num_epochs, print_every=self.print_every)
             trainer_hi_fi.save_model()
             plot_loss_history(self, low_fidelity=False)
             print("Training high_fidelity complete. Loss history and model saved.")
         else:
             trainer = Trainer(project_name=self.project_name, model=self.model, dataloader=self.train_loader, device=self.device, lr=self.lr, 
-                              lr_gamma=self.lr_gamma)
+                              lr_gamma=self.lr_gamma, use_amp=self.use_amp, amp_dtype=self.amp_dtype)
             self.loss_history, self.test_loss_history = trainer.train(self.train_loader, self.test_loader, self.num_epochs, print_every=self.print_every)
             trainer.save_model()
             plot_loss_history(self)

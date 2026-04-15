@@ -1,15 +1,27 @@
 import torch
 import torch.nn as nn
+from torch.utils.checkpoint import checkpoint
 from ..MLP import MLP
 from ..activations import RowdyActivation
 
 class FusionDeepONet(nn.Module):
-    def __init__(self, coord_dim, param_dim, hidden_size, num_hidden_layers, out_dim, aux_dim=0, dropout=0.0):
+    def __init__(
+        self,
+        coord_dim,
+        param_dim,
+        hidden_size,
+        num_hidden_layers,
+        out_dim,
+        aux_dim=0,
+        dropout=0.0,
+        use_activation_checkpointing=False,
+    ):
         super().__init__()
         self.hidden_size = hidden_size
         self.out_dim = out_dim
         self.num_hidden_layers = num_hidden_layers
-        self.aux_dim = aux_dim  # add this
+        self.aux_dim = aux_dim
+        self.use_activation_checkpointing = use_activation_checkpointing
 
         self.branch = MLP(param_dim, hidden_size * out_dim, hidden_size, num_hidden_layers, dropout)
 
@@ -29,6 +41,13 @@ class FusionDeepONet(nn.Module):
 
         self.trunk_final = nn.Linear(hidden_size, hidden_size)
 
+    def _trunk_block(self, x, fusion_gate_i, layer_idx):
+        x = self.trunk_activations[layer_idx](self.trunk_layers[layer_idx](x))
+        if layer_idx > 0:
+            x = self.trunk_dropouts[layer_idx - 1](x)
+        x = x * fusion_gate_i.unsqueeze(1)
+        return x
+
     def forward(self, coords, params, sdf, aux=None):
         Batch_size, n_pts, _ = coords.shape
         branch_out, branch_hiddens = self.branch.forward_with_outputs(params)
@@ -44,13 +63,16 @@ class FusionDeepONet(nn.Module):
                 raise ValueError("FusionDeepONet expected aux input, but aux=None was provided.")
             x = torch.cat((x, aux), dim=-1)
 
-        for i, (layer, act) in enumerate(zip(self.trunk_layers, self.trunk_activations)):
-            x = act(layer(x))
-            if i > 0:
-                x = self.trunk_dropouts[i - 1](x)
-            if i < len(fusion_gate):
-                fusion_gate_i = fusion_gate[i].unsqueeze(1)
-                x = x * fusion_gate_i
+        for i in range(self.num_hidden_layers):
+            if self.use_activation_checkpointing and self.training:
+                x = checkpoint(
+                    lambda x_, gate_, layer_idx=i: self._trunk_block(x_, gate_, layer_idx),
+                    x,
+                    fusion_gate[i],
+                    use_reentrant=False,
+                )
+            else:
+                x = self._trunk_block(x, fusion_gate[i], i)
 
         trunk_features = self.trunk_final(x)
         branch_coefficients = branch_out.view(Batch_size, self.out_dim, self.hidden_size)

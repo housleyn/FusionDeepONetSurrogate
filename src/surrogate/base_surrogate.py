@@ -37,6 +37,13 @@ class BaseSurrogate:
         self.edge_percentile = config.get("edge_percentile", 99.5)
         self.x_lim = config.get("x_lim", None)
         self.y_lim = config.get("y_lim", None)
+        self.use_amp = config.get("use_amp", True)
+        self.amp_dtype = config.get("amp_dtype", "float16")
+        self.use_activation_checkpointing = config.get("use_activation_checkpointing", False)
+        if self.amp_dtype == "bfloat16":
+            self.amp_dtype = torch.bfloat16
+        else:
+            self.amp_dtype = torch.float16
         
 
 

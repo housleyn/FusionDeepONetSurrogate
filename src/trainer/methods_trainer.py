@@ -42,8 +42,15 @@ class MethodsTrainer:
         with torch.no_grad():
             for batch in dataloader:
                 coords, params, targets, sdf, aux = to_device_batch(self, batch)
-                outputs = self.model(coords, params, sdf, aux=aux)
-                loss = self.criterion(outputs, targets)
+
+                with torch.autocast(
+                    device_type="cuda",
+                    dtype=self.amp_dtype,
+                    enabled=self.use_amp
+                ):
+                    outputs = self.model(coords, params, sdf, aux=aux)
+                    loss = self.criterion(outputs, targets)
+
                 bs = targets.size(0)
                 total_loss += loss.item() * bs
                 total_samples += bs
