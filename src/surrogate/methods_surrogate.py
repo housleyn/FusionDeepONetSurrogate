@@ -9,7 +9,7 @@ import numpy as np
 import os
 import glob
 from .residual_calculations import (make_residual_dataset)
-from .inference_functions import (infer_and_validate, inference, infer_all_unseen)
+from .inference_functions import (infer_and_validate, inference, infer_all_unseen, infer_full_flowfield_l2, infer_and_validate_3d)
 from .plotting_surrogate import (plot_loss_history)
 
 class MethodsSurrogate:
@@ -102,6 +102,12 @@ class MethodsSurrogate:
     
     def _infer_all_unseen(self, folder):
         infer_all_unseen(self, folder)
+        
+    def _infer_full_flowfield_l2(self, folder):
+        infer_full_flowfield_l2(self, folder)
+
+    def _infer_and_validate_3d(self, file):
+        return infer_and_validate_3d(self, file)
 
     def _get_data_files(self):
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", self.data_folder))
