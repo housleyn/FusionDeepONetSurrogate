@@ -185,63 +185,121 @@ def infer_full_flowfield_l2(self, folder):
 
     return global_errors
 
-def infer_and_validate_3d(self, file):
+def infer_and_validate_3d(self, file, batch_size=50000):
     """
-    Run inference on a single full 3D CSV file by passing one row at a time
-    through the model, then combine all predictions and compute global L2
-    errors for the full 3D flowfield.
+    Batched 3D inference.
 
-    No plotting.
+    Each point keeps its own parameter row, including its own Z_slice.
+
+    Model input shapes:
+        coords: (B, 1, coord_dim)
+        params: (B, param_dim)
+        sdf:    (B, 1, sdf_dim)
+
+    Model output shape:
+        pred:   (B, 1, output_dim)
     """
 
     if self.model_type == "low_fi_fusion":
         stats_path = os.path.join(
             self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
         )
-        low_fi_stats_path = os.path.join(
-            self.project_root, "Outputs", self.project_name, "processed_low_fi_data.npz"
-        )
+        low_fi_stats_path = stats_path
+
         inference = Inference(
             self.project_name,
             config_path=self.config_path,
             model_path=self.model_path,
             stats_path=stats_path,
             low_fi_stats_path=low_fi_stats_path,
-            low_fi_model_path=self.low_fi_model_path if self.model_type == "low_fi_fusion" else None
+            low_fi_model_path=self.low_fi_model_path,
         )
     else:
         stats_path = self.npz_path
+
         inference = Inference(
             self.project_name,
             config_path=self.config_path,
             model_path=self.model_path,
             stats_path=stats_path,
-            low_fi_model_path=self.low_fi_model_path if self.model_type == "low_fi_fusion" else None
+            low_fi_model_path=None,
         )
 
     coords_np, params_np, sdf_np = inference.load_csv_input(file)
 
+    n_points = coords_np.shape[0]
+    print(f"Beginning batched 3D inference for {n_points} points...")
+    print(f"Batch size: {batch_size}")
+
     all_outputs = []
 
-    n_points = coords_np.shape[0]
-    print(f"Beginning 3D row-wise inference for {n_points} points...")
+    for start in range(0, n_points, batch_size):
+        end = min(start + batch_size, n_points)
 
-    for i in range(n_points):
-        coord_i = coords_np[i:i+1]   # shape: (1, 3)
-        param_i = params_np[i]       # shape: (param_dim,)
-        sdf_i = sdf_np[i:i+1]        # shape: (1, sdf_dim)
+        coords_batch_np = coords_np[start:end]
+        params_batch_np = params_np[start:end]
+        sdf_batch_np = sdf_np[start:end]
 
-        output_i = inference.predict(coord_i, param_i, sdf_i)
-        all_outputs.append(output_i)
+        # Convert to tensors
+        coords = torch.tensor(
+            coords_batch_np,
+            dtype=torch.float32,
+            device=inference.device
+        ).unsqueeze(1)  # (B, 1, coord_dim)
 
-        if (i + 1) % 10000 == 0 or (i + 1) == n_points:
-            print(f"Inferred {i + 1}/{n_points} points")
+        params = torch.tensor(
+            params_batch_np,
+            dtype=torch.float32,
+            device=inference.device
+        )  # (B, param_dim)
+
+        sdf = torch.tensor(
+            sdf_batch_np,
+            dtype=torch.float32,
+            device=inference.device
+        ).unsqueeze(1)  # (B, 1, sdf_dim)
+
+        with torch.inference_mode():
+            if self.model_type == "low_fi_fusion":
+                low_fi_pred = inference.model_1(coords, params, sdf)
+                low_fi_pred_denorm = inference._low_fi_denormalize(low_fi_pred)
+
+                if inference.use_lf_augmentation:
+                    low_fi_pred_residual_norm = (
+                        low_fi_pred_denorm - inference.residual_stats["outputs_mean"]
+                    ) / inference.residual_stats["outputs_std"]
+
+                    residual_pred = inference.model_2(
+                        coords,
+                        params,
+                        sdf,
+                        aux=low_fi_pred_residual_norm,
+                    )
+                else:
+                    residual_pred = inference.model_2(coords, params, sdf)
+
+                pred = inference._residual_denormalize(residual_pred) + low_fi_pred_denorm
+
+            else:
+                pred = inference.model(coords, params, sdf)
+                pred = inference._denormalize(pred)
+
+        # pred shape is (B, 1, output_dim), so remove n_pts dimension
+        pred_np = pred.squeeze(1).detach().cpu().numpy()
+
+        all_outputs.append(pred_np)
+
+        print(f"Inferred {end}/{n_points} points")
 
     output = np.vstack(all_outputs)
 
     predicted_output = os.path.join(
-        self.project_root, "Outputs", self.project_name, "predicted_output_3d.csv"
+        self.project_root,
+        "Outputs",
+        self.project_name,
+        "predicted_output_3d.csv",
     )
+
     inference.save_to_csv(coords_np, output, out_path=predicted_output)
     print(f"Inference complete. Output saved to {predicted_output}.")
 
@@ -260,10 +318,12 @@ def infer_and_validate_3d(self, file):
     global_errors = {}
 
     print("\n=== Global L2 Error Across Full 3D Flowfield ===")
+
     for field_name, (true_col, pred_col) in field_map.items():
         if true_col not in df_true.columns:
             print(f"Skipping {field_name}: true column '{true_col}' not found.")
             continue
+
         if pred_col not in df_pred.columns:
             print(f"Skipping {field_name}: predicted column '{pred_col}' not found.")
             continue
@@ -272,10 +332,7 @@ def infer_and_validate_3d(self, file):
         y_pred = df_pred[pred_col].to_numpy().ravel()
 
         denom = np.linalg.norm(y_true)
-        if denom == 0:
-            err = np.nan
-        else:
-            err = 100.0 * np.linalg.norm(y_true - y_pred) / denom
+        err = np.nan if denom == 0 else 100.0 * np.linalg.norm(y_true - y_pred) / denom
 
         global_errors[field_name] = err
         print(f"{field_name}: {err:.6f}%")
